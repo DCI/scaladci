@@ -214,14 +214,14 @@ cd scaladci
 ./sbt
 gen-idea    <-- builds IntelliJ project files and resolves dependencies
 ```
-- Open IntelliJ ( don't have eclipse solution, sorry)
+- Open [IntelliJ](http://www.jetbrains.com/idea/nextversion/index.html) ( don't have eclipse solution, sorry)
 - Open project (point to the scaladci folder that you cloned to)
 - Rebuild project
 - Run tests or examples
 
 **Any comments or pull requests are welcome!**
 
-## Ressources
+## Resources
 
 #### DCI
 - [Object-composition](https://groups.google.com/forum/?fromgroups#!forum/object-composition)
@@ -254,4 +254,3 @@ many of the same concepts and concerns involved, so I highly recommend to have a
 
 I tried to apply his solutions to DCI and got it to kind of work. But macros seems like 
 a stronger solution since it can check runtime constraints at compile time.
-
