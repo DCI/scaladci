@@ -2,7 +2,7 @@ import sbt._
 import sbt.Keys._
 
 object ScalaDCIBuild extends Build {
-  val buildScalaVersion = "2.10.0-RC1"
+  val buildScalaVersion = "2.10.0-RC2"
 
   val commonSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.github.dci",
@@ -14,9 +14,9 @@ object ScalaDCIBuild extends Build {
       , "-language:experimental.macros"
     ),
     libraryDependencies ++= Seq(
-      "org.scalatest" % "scalatest_2.10.0-RC1" % "2.0.M4",
+      "org.scalatest" % "scalatest_2.10.0-RC2" % "2.0.M4",
       "org.scala-lang" % "scala-actors" % buildScalaVersion,
-      "org.specs2" % "specs2_2.10.0-RC1" % "1.12.2",
+      "org.specs2" % "specs2_2.10.0-RC2" % "1.12.2",
       "org.scalaj" % "scalaj-time_2.9.2" % "0.6"
     ),
     resolvers += Classpaths.typesafeSnapshots

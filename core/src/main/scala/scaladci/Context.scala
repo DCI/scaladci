@@ -63,14 +63,14 @@ object Context {
           case Assign(Select(x@Ident(obj), field), _) if obj == testTerm =>
             abort(s"Line ${x.pos.line}: Assigning a value to ${obj.toString}.${field.toString}")
 
-          case Apply(Select(x@Ident(obj), method), _) if obj == testTerm =>
-            abort(s"Line ${x.pos.line}: Calling ${obj.toString}.${method.toString}(...)")
+//          case Apply(Select(x@Ident(obj), method), _) if obj == testTerm =>
+//            abort(s"Line ${x.pos.line}: Calling ${obj.toString}.${method.toString}(...)")
+//
+//          case Apply(TypeApply(Select(x@Ident(obj), method), _), _) if obj == testTerm =>
+//            abort(s"Line ${x.pos.line}: Calling ${obj.toString}.${method.toString}(...)")
 
-          case Apply(TypeApply(Select(x@Ident(obj), method), _), _) if obj == testTerm =>
-            abort(s"Line ${x.pos.line}: Calling ${obj.toString}.${method.toString}(...)")
-
-          case ValDef(_, variable, TypeTree(), x@Ident(obj)) if obj == testTerm =>
-            abort(s"Line ${x.pos.line}: Assigning Data objects to variables ($variable = ${obj.toString})")
+//          case ValDef(_, variable, TypeTree(), x@Ident(obj)) if obj == testTerm =>
+//            abort(s"Line ${x.pos.line}: Assigning Data objects to variables ($variable = ${obj.toString})")
 
           case _ => super.transform(tree) // recursive call into the "remaining" tree structure
         }
