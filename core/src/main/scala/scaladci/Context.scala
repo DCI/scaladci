@@ -84,7 +84,7 @@ object Context {
     stop(ctxMembers.collect {
       case v: TermSymbol if (v.isVal || v.isVar) && !v.isParamAccessor && (v.getter.isProtected || v.getter.isPublic) && v.getter.isTerm => v.name.toString
       //    }, "Please mark the following Context val/var's as private:")
-    }, "Please mark the following Context val/var's as private:" + showRaw(ctxTree))
+    }, "Please mark the following Context val/var's as private:")
 
     // Enforce Role traits in Context to be private
     stop(ctxMembers.collect {

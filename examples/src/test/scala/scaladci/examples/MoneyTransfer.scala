@@ -1,7 +1,6 @@
 package scaladci
-package examples.MoneyTransferMarvinTest
+package examples.MoneyTransfer
 import scala.language.reflectiveCalls
-//import org.scala_tools.time.Imports._
 
 case class LedgerEntry(message: String, amount: Int)
 

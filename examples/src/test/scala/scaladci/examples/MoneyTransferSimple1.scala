@@ -1,5 +1,5 @@
 package scaladci
-package examples.MoneyTransfer1Test
+package examples.MoneyTransferSimple1
 
 case class Account(var acc: String, var balance: Int) {
   def increaseBalance(amount: Int) { balance = balance + amount }
@@ -7,7 +7,7 @@ case class Account(var acc: String, var balance: Int) {
 }
 
 class MoneyTransfer(acc1: Account, acc2: Account, amount: Int) extends Context {
-  private val source = acc1.as[Source]
+  private val source      = acc1.as[Source]
   private val destination = acc2.as[Destination]
 
   source.withdraw()
@@ -27,8 +27,8 @@ class MoneyTransfer(acc1: Account, acc2: Account, amount: Int) extends Context {
 }
 
 object MoneyTransfer1Test extends App {
-  val salary = new Account("Salary", 3000)
-  val budget = new Account("Budget", 1000)
+  val salary = Account("Salary", 3000)
+  val budget = Account("Budget", 1000)
   new MoneyTransfer(salary, budget, 700)
 }
 
