@@ -2,7 +2,7 @@ import sbt._
 import sbt.Keys._
 
 object ScalaDCIBuild extends Build {
-  val buildScalaVersion = "2.10.0-RC2"
+  val buildScalaVersion = "2.10.0-RC3"
 
   val commonSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.github.dci",

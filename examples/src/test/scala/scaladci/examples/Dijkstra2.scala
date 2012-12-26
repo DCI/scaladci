@@ -42,7 +42,7 @@ object Dijkstra2 extends App {
       def markAsUnvisited() { unvisited ++= nodes }
       def unvisitedNeighborsOf(n: Node) = graph.data(n).filter(n => unvisited.contains(n._1)).keys
       def distanceBetween(current: Node, neighbor: Node) = graph.data(current)(neighbor)
-      def closestUnvisited = unvisited.reduce((a: Node, b: Node) => if (tentDist(a) < tentDist(b)) a else b)
+      def closestUnvisited = unvisited.reduce((a, b) => if (tentDist(a) < tentDist(b)) a else b)
     }
 
     private trait Neighbor {self: Node =>

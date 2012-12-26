@@ -4,9 +4,7 @@ import scala.reflect.macros.{Context => MacroContext}
 trait PlayingRole
 
 trait Context {
-  implicit protected def obj2binder[OBJ](obj: OBJ) = new Binder(obj)
-
-  protected class Binder[OBJ](val obj: OBJ) {
+  implicit protected class Binder[OBJ](val obj: OBJ) {
     def as[ROLE] = macro Context.bind[OBJ, ROLE]
   }
 }
