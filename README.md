@@ -251,6 +251,3 @@ many of the same concepts and concerns involved, so I highly recommend to have a
 - [Scala Roles](http://mp.binaervarianz.de/icsoft2008.pdf) - 8-page article by Michael Pradel and Martin Odersky
 - [Full thesis](http://mp.binaervarianz.de/scala_roles_diploma_thesis.pdf)
 - [code](http://mp.binaervarianz.de/scala_roles/scala_roles.tar.gz)
-
-I tried to apply his solutions to DCI and got it to kind of work. But macros seems like 
-a stronger solution since it can check runtime constraints at compile time.
