@@ -1,0 +1,588 @@
+" DCI program: BB7Dijkstra "
+" Exported from Squeak 7179-basic.78.image on: 29 January 2012 by: Trygve "
+
+" Data perspective "
+" Class BB7Edge "
+
+" An instance represents an edge in the geometry network. (alternatively, it could be seen as representing a
+one way street going from an intersection to a neighboring intersection) "
+
+Object subclass: #BB7Edge
+    instanceVariableNames: 'from to'
+    classVariableNames: ''
+    poolDictionaries: ''
+    category: 'BB7Dijkstra-Data'
+
+" BB7Edge instance methods in category: accessing "
+
+= anEdge
+    ^from = anEdge from and: [to = anEdge to]
+
+from
+    ^ from
+
+from: f to: t
+    from := f.
+    to := t.
+
+to
+    ^ to
+
+" BB7Edge instance methods in category: private "
+
+hash
+    ^from hash bitXor: to hash
+
+printOn: strm
+    " Convenience method used by Inspector and Debugger. "
+    super printOn: strm.
+    strm nextPutAll: ' ' , from name , '->' , to name.
+
+" Class BB7ManhattanGeometry "
+
+" An instance represents a modified manhattan geometry.
+The modification is that all edges are unidirectional and that all travel is eastwards and/or southwards.
+"
+
+Object subclass: #BB7ManhattanGeometry
+    instanceVariableNames: 'nodeDict distanceDict eastNeighborDict southNeighborDict'
+    classVariableNames: ''
+    poolDictionaries: ''
+    category: 'BB7Dijkstra-Data'
+
+" BB7ManhattanGeometry instance methods in category: access "
+
+distanceDict
+    ^distanceDict
+
+distanceDict: dict
+    distanceDict := dict.
+
+eastNeighborDict: dict
+    eastNeighborDict := dict.
+
+eastNeighborOf: node
+    ^eastNeighborDict at: node ifAbsent: [nil].
+
+name
+    ^self class name
+
+nodeDict: dict
+    nodeDict := dict.
+
+nodeNamed: nodeName
+    ^nodeDict at: nodeName
+
+nodes
+    ^nodeDict values
+
+southNeighborOf: node
+    ^southNeighborDict at: node ifAbsent: [nil].
+
+" BB7ManhattanGeometry instance methods in category: private "
+
+addDistanceFrom: fromName to: toName as: distance
+    | fromNode toNode |
+    fromNode := nodeDict at: fromName.
+    toNode := nodeDict at: toName.
+    distanceDict
+        at: (BB7Edge new from: fromNode to: toNode) put: distance.
+
+addEastNeighborFrom: fromName to: toName
+    | fromNode toNode |
+    fromNode := nodeDict at: fromName.
+    toNode := nodeDict at: toName.
+    eastNeighborDict
+        at: fromNode put: toNode.
+
+addSouthNeighborFrom: fromName to: toName
+    | fromNode toNode |
+    fromNode := nodeDict at: fromName.
+    toNode := nodeDict at: toName.
+    southNeighborDict
+        at: fromNode put: toNode.
+
+" Class BB7Node "
+
+" An instance represents a named intersection in a modified manhattan geometry.
+(See comments for the BB7bManhattanGeometry class.
+"
+
+Object subclass: #BB7Node
+    instanceVariableNames: 'name'
+    classVariableNames: ''
+    poolDictionaries: ''
+    category: 'BB7Dijkstra-Data'
+
+" BB7Node instance methods in category: access "
+
+name
+    ^name
+
+" BB7Node instance methods in category: private "
+
+initialize: aName
+    name := aName.
+
+printOn: aStrm
+    " Convenience method used by Inspector and Debugger. "
+    super printOn: aStrm.
+    aStrm nextPutAll: 'node=' , name printString.
+    ^aStrm
+
+" BB7Node class class methods in category: instance creation "
+
+named: nameSymbol
+    ^self basicNew initialize: nameSymbol
+
+" Context perspective "
+" Context: BB7CalculateShortestDistanceCTX "
+" Class BB7CalculateShortestDistanceCTX "
+
+" The BB7CalculateShortestPathCTX calculate the distances from a start node to all other nodes.
+This use case is, therefore, redundant, and can pick up the distance from the above Context. "
+
+BB1Context subclass: #BB7CalculateShortestDistanceCTX
+    instanceVariableNames: 'geometry'
+    classVariableNames: ''
+    poolDictionaries: ''
+    category: 'BB7Dijkstra-Context'
+
+" BB7CalculateShortestDistanceCTX instance methods in category: private "
+
+geometry: geom
+    geometry := geom
+
+" BB7CalculateShortestDistanceCTX instance methods in category: triggers "
+
+shortestDistanceFrom: startName to: endName
+    | path |
+    path := (BB7CalculateShortestPathCTX new geometry: geometry)
+        shortestPathFrom: startName to: endName.
+    ^path last value
+
+" This Context has no roles and no role diagram. "
+
+
+" Context: BB7CalculateShortestPathCTX "
+" Class BB7CalculateShortestPathCTX "
+
+" This Context computes the shortest path to all nodes from a given origin node, using recursion rather than a loop.
+The result is a list of the shortest paths from origin to each of the other nodes. The list elements are associations
+(node -> distance).
+
+This implementation tries to follow the Ruby algorithm with two known exceptions (There are probably more. We regret
+that we have not yet completely deciphered the Ruby code):
+    # Ruby has two coordinate systems: street/avenue and East/South. This implementation has has only East/South.
+    #    The mechanism for computing the path is different from Ruby.
+        We here use a simple mechanism illustrated in
+         http://www.youtube.com/watch?v=psg2-6-CEXg&feature=related
+        Also see the (role binding) DistanceDict method in this class
+    #    The EastNeighbor and SouthNeighbor roles are regular roles with regular role methods.
+    #    We use separate associative arrays (Dictionaries) for holding tentative distances etc. (No modules)
+        They are stored in the Context object since they represent state relevant to the interaction.
+    #    Some data need to be always visible through the recursion.
+        We set these data in the recur method rather than in message arguments.
+
+"
+
+BB1Context subclass: #BB7CalculateShortestPathCTX
+    instanceVariableNames: 'geometry tentativeDistanceDict unvisitedSet path destination origin current'
+    classVariableNames: ''
+    poolDictionaries: ''
+    category: 'BB7Dijkstra-Context'
+
+" BB7CalculateShortestPathCTX instance methods in category: accessing "
+
+destination: anObject
+    "Set the value of destination"
+
+    destination := anObject
+
+geometry: geom
+    " This is a first time initialization of key variables. "
+    " Not to be called on recursive calls. "
+    | pathTo |
+    geometry := geom.
+    tentativeDistanceDict := Dictionary new. " node -> a BB7TentativeDistance "
+    unvisitedSet := Set new.
+    geometry nodes do:
+        [:nod |
+        unvisitedSet add: nod.
+        tentativeDistanceDict at: nod put: (BB7TentativeDistance new distance: Float infinity previousNode: nil).
+        ].
+    path := OrderedCollection new.
+    pathTo := Dictionary new.
+
+tentativeDistanceDict: anObject
+    tentativeDistanceDict := anObject
+
+unvisitedSet: aSet
+    unvisitedSet := aSet
+
+" BB7CalculateShortestPathCTX instance methods in category: role binding "
+
+CurrentContext
+    ^self
+
+CurrentIntersection
+    " The undecided node that is closest to the origin. ('u' in the Dijkstra algorithm). "
+    | currDist |
+    current := nil.
+    currDist := Float infinity.
+    unvisitedSet do:
+        [:nod || dist |
+        (dist := (tentativeDistanceDict at: nod) distance) < currDist
+            ifTrue:
+                [current := nod.
+                currDist := dist]].
+    ^current
+
+DistanceDict
+    " DistanceDict is a Dictionary with entries
+            (thisNode -> aBB7TentativeDistance from the start node to thisNode) "
+    ^tentativeDistanceDict
+
+EastNeighbor
+    ^geometry eastNeighborOf: CurrentIntersection.
+
+Map
+    ^geometry
+
+SouthNeighbor
+    ^geometry southNeighborOf: CurrentIntersection.
+
+Unvisited
+    " The set of unvisited nodes. ('Q' in the Dijkstra algorithm)"
+    ^unvisitedSet
+
+remap
+    self clearRoleMap
+        at: #CurrentIntersection put: self CurrentIntersection;
+        at: #CurrentContext put: self CurrentContext;
+        at: #EastNeighbor put: self EastNeighbor;
+        at: #SouthNeighbor put: self SouthNeighbor;
+        at: #Map put: self Map;
+        at: #DistanceDict put: self DistanceDict;
+        at: #Unvisited put: self Unvisited.
+
+" BB7CalculateShortestPathCTX instance methods in category: triggers "
+
+recur
+    | ctx |
+    self remap.
+    ctx := BB7CalculateShortestPathCTX new.
+    " Ensure continuity through the recursion for critical variables. "
+    " Setting these variables in an inner execution is done here rather than through message arguments. "
+    ctx
+        geometry: geometry;
+        tentativeDistanceDict: tentativeDistanceDict;
+        unvisitedSet: unvisitedSet;
+        destination: destination.
+    "ctx executeInContext: [self triggerInteraction]."
+    ctx runInteractionFromRoleNamed: #CurrentIntersection.
+    "self runInteractionFromRoleNamed: #CurrentIntersection."
+"    ctx executeInContext: [ctx triggerInteraction]."
+
+shortestPathFrom: originName to: destinationName
+    | node |
+    " Preamble before entering the interaction. "
+    origin := geometry nodeNamed: originName.
+    destination := geometry nodeNamed: destinationName.
+    (tentativeDistanceDict at: origin) distance: 0. " element = a BB7bTentativeDistance "
+    " Enter recursive interaction algorithm: "
+    self runInteractionFromRoleNamed: #CurrentIntersection.
+    " Termination. "
+    " Build shortest path collection. "
+    path := OrderedCollection new.
+    node := destination.
+    [node notNil]
+    whileTrue:
+        [path addFirst: node -> (tentativeDistanceDict at: node) distance.
+        node := (tentativeDistanceDict at: node) previousNode].
+    ^path
+
+" BB7CalculateShortestPathCTX class class methods in category: context diagram "
+
+linkBreakPoints
+    | dict |
+    (dict := Dictionary new)
+        at: #'SouthNeighbor_DistanceDict' put: {(665@225). };
+        at: #'EastNeighbor_DistanceDict' put: {(660@120). };
+        yourself.
+    ^dict.
+
+rolePositions
+    | dict |
+    (dict := Dictionary new)
+        at: #CurrentIntersection put: 80@127;
+        at: #Unvisited put: 180@220;
+        at: #CurrentContext put: 110@55;
+        at: #DistanceDict put: 590@150;
+        at: #Map put: 90@225;
+        at: #SouthNeighbor put: 375@200;
+        at: #EastNeighbor put: 385@95;
+        yourself.
+    ^dict.
+
+" BB7CalculateShortestPathCTX class class methods in category: role structure "
+
+roleStructure
+    ^super roleStructure
+    at: #CurrentIntersection put: #(#CurrentContext #EastNeighbor #SouthNeighbor #Map #Unvisited );
+    at: #Unvisited put: #();
+    at: #CurrentContext put: #();
+    at: #DistanceDict put: #();
+    at: #Map put: #();
+    at: #SouthNeighbor put: #(#CurrentIntersection #DistanceDict );
+    at: #EastNeighbor put: #(#CurrentIntersection #DistanceDict );
+        yourself.
+
+
+" methodless role: CurrentContext "
+
+" methodful role: CurrentIntersection "
+
+run
+    CurrentIntersection computeDistances.
+
+computeDistances
+    " This method computes the final distance for the node named the CurrentIntersection. "
+    EastNeighbor ifNotNil:
+        [EastNeighbor recomputeTentativeDistance].
+    SouthNeighbor ifNotNil:
+        [SouthNeighbor recomputeTentativeDistance].
+    Unvisited remove: self.
+    Unvisited ifNotEmpty: [CurrentContext recur].
+
+distanceTo: aNode
+    ^(Map distanceDict) at: (BB7Edge new from: self to: aNode)
+
+" methodless role: DistanceDict "
+
+" methodful role: EastNeighbor "
+
+recomputeTentativeDistance
+    | oldDistance newDistance |
+    oldDistance := (DistanceDict at: self) distance.
+    newDistance := (DistanceDict at: CurrentIntersection) distance
+                     + (CurrentIntersection distanceTo: self).
+    newDistance < oldDistance
+    ifTrue:
+        [DistanceDict
+            at: self
+            put: (BB7TentativeDistance new
+                    distance: newDistance previousNode: CurrentIntersection)].
+
+" methodless role: Map "
+
+" methodful role: SouthNeighbor "
+
+recomputeTentativeDistance
+    | oldDistance newDistance |
+    oldDistance := (DistanceDict at: self) distance.
+    newDistance := (DistanceDict at: CurrentIntersection) distance
+                     + (CurrentIntersection distanceTo: self).
+    newDistance < oldDistance
+    ifTrue:
+        [DistanceDict
+            at: self
+            put: (BB7TentativeDistance new
+                    distance: newDistance previousNode: CurrentIntersection)].
+
+" methodless role: Unvisited "
+
+
+" Test perspective "
+" Class BB7ManhattanTest1 "
+
+" Populate a ManhattanGeometry with test data. "
+
+BB7ManhattanGeometry subclass: #BB7ManhattanTest1
+    instanceVariableNames: ''
+    classVariableNames: ''
+    poolDictionaries: ''
+    category: 'BB7Dijkstra-Test'
+
+" BB7ManhattanTest1 instance methods in category: private "
+
+initialize
+    super initialize.
+    self
+        initializeNodeDict;
+        initializeDistanceDict;
+        initializeEastNeighborsDict;
+        initializeSouthNeighborDict.
+
+initializeDistanceDict
+    " Create the distance dictionary. "
+    distanceDict := Dictionary new.
+    nodeDict keys do: [:from| nodeDict keys do: [:to | self addDistanceFrom: from to: to as: Float infinity]].
+    " This indirect form is chosen to give user maximum readability. It's his responsibility to get it right! "
+    self
+        addDistanceFrom: #a to: #b as: 2;
+        addDistanceFrom: #b to: #c as: 3;
+        addDistanceFrom: #a to: #d as: 1;
+        addDistanceFrom: #b to: #e as: 2;
+        addDistanceFrom: #c to: #f as: 1;
+        addDistanceFrom: #d to: #e as: 1;
+        addDistanceFrom: #e to: #f as: 1;
+        addDistanceFrom: #d to: #g as: 2;
+        addDistanceFrom: #f to: #i as: 4;
+        addDistanceFrom: #g to: #h as: 1;
+        addDistanceFrom: #h to: #i as: 2.
+
+initializeEastNeighborsDict
+    eastNeighborDict := Dictionary new.
+    self
+        addEastNeighborFrom: #a to: #b;
+        addEastNeighborFrom: #b to: #c;
+        addEastNeighborFrom: #d to: #e;
+        addEastNeighborFrom: #e to: #f;
+        addEastNeighborFrom: #g to: #h;
+        addEastNeighborFrom: #h to: #i.
+
+initializeNodeDict
+    " Create the nodes. "
+    nodeDict := Dictionary new.
+    #(a b c d e f g h i) do:
+        [:nameSymbol | nodeDict at: nameSymbol put: (BB7Node named: nameSymbol)].
+
+initializeSouthNeighborDict
+    southNeighborDict := Dictionary new.
+    self
+        addSouthNeighborFrom: #a to: #d;
+        addSouthNeighborFrom: #b to: #e;
+        addSouthNeighborFrom: #c to: #f;
+        addSouthNeighborFrom: #d to: #g;
+        addSouthNeighborFrom: #f to: #i.
+
+" Class BB7ManhattanTest2 "
+
+" Populate a ManhattanGeometry with test data. "
+
+BB7ManhattanGeometry subclass: #BB7ManhattanTest2
+    instanceVariableNames: ''
+    classVariableNames: ''
+    poolDictionaries: ''
+    category: 'BB7Dijkstra-Test'
+
+" BB7ManhattanTest2 instance methods in category: private "
+
+initialize
+    super initialize.
+    self
+        initializeNodeDict;
+        initializeDistanceDict;
+        initializeEastNeighborsDict;
+        initializeSouthNeighborDict.
+
+initializeDistanceDict
+    " Create the distance dictionary. "
+    distanceDict := Dictionary new.
+    nodeDict keys do: [:from| nodeDict keys do: [:to | self addDistanceFrom: from to: to as: Float infinity]].
+    " This indirect form is chosen to give user maximum readability. It's his responsibility to get it right! "
+    self
+        addDistanceFrom: #a to: #b as: 2;
+        addDistanceFrom: #b to: #c as: 3;
+        addDistanceFrom: #c to: #f as: 1;
+        addDistanceFrom: #f to: #i as: 4;
+        addDistanceFrom: #b to: #e as: 2;
+        addDistanceFrom: #e to: #f as: 1;
+        addDistanceFrom: #a to: #d as: 1;
+        addDistanceFrom: #d to: #g as: 2;
+        addDistanceFrom: #g to: #h as: 1;
+        addDistanceFrom: #h to: #i as: 2;
+        addDistanceFrom: #d to: #e as: 1;
+        addDistanceFrom: #c to: #j as: 1;
+        addDistanceFrom: #j to: #k as: 1;
+        addDistanceFrom: #i to: #k as: 2.
+
+initializeEastNeighborsDict
+    eastNeighborDict := Dictionary new.
+    self
+        addEastNeighborFrom: #a to: #b;
+        addEastNeighborFrom: #b to: #c;
+        addEastNeighborFrom: #c to: #j;
+        addEastNeighborFrom: #d to: #e;
+        addEastNeighborFrom: #e to: #f;
+        addEastNeighborFrom: #g to: #h;
+        addEastNeighborFrom: #h to: #i;
+        addEastNeighborFrom: #i to: #k.
+
+initializeNodeDict
+    " Create the nodes. "
+    | names |
+    nodeDict := Dictionary new.
+    names := #(a b c d e f g h i j k).
+    names do:
+        [:nameSymbol | nodeDict at: nameSymbol put: (BB7Node named: nameSymbol)].
+
+initializeSouthNeighborDict
+    southNeighborDict := Dictionary new.
+    self
+        addSouthNeighborFrom: #a to: #d;
+        addSouthNeighborFrom: #b to: #e;
+        addSouthNeighborFrom: #c to: #f;
+        addSouthNeighborFrom: #d to: #g;
+        addSouthNeighborFrom: #f to: #i;
+        addSouthNeighborFrom: #j to: #k.
+
+" Class BB7Test "
+
+" This class creates two test geometries and list distance and path from origin node to end node for each of them. "
+
+Object subclass: #BB7Test
+    instanceVariableNames: ''
+    classVariableNames: ''
+    poolDictionaries: ''
+    category: 'BB7Dijkstra-Test'
+
+" BB7Test instance methods in category: testing "
+
+run
+    | geometry1 geometry2 distance1 distance2 path1 path2 |
+
+    Transcript clear.
+
+    geometry1 := BB7ManhattanTest1 new.
+    distance1 := (BB7CalculateShortestDistanceCTX new geometry: geometry1) shortestDistanceFrom: #a to: #i.
+    Transcript cr; show:
+        'Shortest distance from ' , '#a' , ' to ' , '#i' , ' in ' , geometry1 name , ' is: ' , distance1 printString; cr.
+
+    path1 := (BB7CalculateShortestPathCTX new geometry: geometry1) shortestPathFrom: #a to: #i.
+    Transcript cr; print: 'Shortest path from ' , '#a' , ' to ' , '#i' , ' in ' , geometry1 name , ' is: '; cr; tab.
+    path1 do: [:assoc | " node -> distance " Transcript space; print: assoc key name].
+    Transcript cr.
+
+    Transcript cr; show: '----------------------------------------'; cr.
+
+    geometry2 := BB7ManhattanTest2 new.
+    distance2 := (BB7CalculateShortestDistanceCTX new geometry: geometry2) shortestDistanceFrom: #a to: #k.
+
+    Transcript cr; show:
+        'Shortest distance from ' , '#a' , ' to ' , '#k' , ' in ' , geometry2 name , ' is: ' , distance2 printString; cr.
+
+    path2 := (BB7CalculateShortestPathCTX new geometry: geometry2) shortestPathFrom: #a to: #k.
+    Transcript cr; show: 'Shortest path from ' , '#a' , ' to ' , '#k' , ' in ' , geometry2 name printString , ' is: '; cr; tab.
+    path2 do: [:assoc | " node -> distance " Transcript space; print: assoc key name].
+    Transcript cr.
+
+    Transcript cr; endEntry.
+
+" BB7Test class class methods in category: class initialization "
+
+initialize
+    " BB7Test initialize "
+    " This magic makes 'BB7b: Test Dijkstra algorithm' appear as a choice "
+    " in the background menu/'open' command. "
+    " The command triggers the BB7bTest class method 'run'. "
+    TheWorldMenu unregisterOpenCommand: 'BB7: Test Dijkstra algorithm'.
+    TheWorldMenu
+        registerOpenCommand:
+            {'BB7Dijkstra: Test Dijkstra algorithm'. {BB7Test. #run.}}.
+
+" BB7Test class class methods in category: instance creation "
+
+run
+    self basicNew initialize run

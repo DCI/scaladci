@@ -1,0 +1,572 @@
+
+#!/usr/bin/env ruby
+# Example in Ruby – Dijkstra's algorithm in a programming style
+#	Modified and simplified for a Manhattan geometry with 3 roles
+#
+#
+# Demonstrates an example where:
+#	- objects of class Node play several roles simultaneously
+#	  (albeit spread across Contexts: a Node can
+#	  play the CurrentIntersection in one Context and an Eastern or Southern
+#	  Neighbor in another)
+#	- stacked Contexts (to implement recursion)
+#	- mixed access of objects of Node through different
+#	  paths of role elaboration (the root is just a node,
+#	  whereas others play roles)
+#	- there is a significant pre-existing data structure called
+#	  a Map which contains the objects of instance. Where DCI
+#	  comes in is to ascribe roles to those objects and let
+#	  them interact with each other to evaluate the minimal
+#	  path through the network
+#	- true to core DCI we are almost always concerned about
+#	  what happens between the objects (paths and distance)
+#	  rather than in the objects themselves (which have
+#	  relatively uninteresting properties like "name")
+#	- equality of nodes is not identity, and several
+#	  nodes compare equal with each other by standard
+#	  equality (eql?)
+#	- returns references to the original data objects
+#	  in a vector, to describe the resulting path
+#
+#	There are some curiosities
+#	- EastNeighbor and SouthNeighbor were typographically equivalent,
+#	  so I folded them into a single role: Neighbor. That type still
+#	  serves the two original roles
+#	- Roles are truly scoped to the use case context
+#	- The Map and Distance_labeled_graph_node roles have to be duplicated in two Contexts
+#	- Node inheritance is replaced by injecting two roles
+#	  into the object
+#	- Injecting some roles causes data objects to take on new
+#	  data members. I can work around this by keeping the data
+#	  in a separate associative vector, but this seems the
+#	  right "Ruby way"
+#	- There is an intentional call to distance_between while the
+#	  Context is still extant, but outside the scope of the
+#	  Context itself. Should that be legal?
+
+# Global boilerplate
+
+Pair = Struct.new(:from, :to)
+def infinity; return (2**(0.size * 8 -2) -1) end
+
+module ContextAccessor
+ def context
+   Thread.current[:context]
+ end
+
+ def context=(ctx)
+   Thread.current[:context] = ctx
+ end
+
+ def execute_in_context
+   old_context = self.context
+   self.context = self
+   yield
+   self.context = old_context
+ end
+end
+
+
+#
+# Consider street corners on a Manhattan grid. We want to find the
+# minimal path from the most northeast city to the most
+# southeast city. Use Dijstra's algorithm
+#
+
+# Data class
+
+class Node
+	attr_reader :name
+	def initialize(n); @name = n end
+	def eql? (another_node)
+		# Nodes are == equal if they have the same name
+		return name == another_node.name
+	end
+	def == (another_node)
+		# Equality used in the Map algorithms is object identity
+		super
+	end
+end
+
+
+# This is the main Context for shortest path calculation
+
+class CalculateShortestPath
+	# Housekeeping crap
+
+	include ContextAccessor
+
+	# These are handles to internal housekeeping arrays set up in initialize
+
+	def unvisited; @unvisited end
+	def pathTo; @pathTo end
+	def east_neighbor; @east_neighbor end
+	def south_neighbor; @south_neighbor end
+	def path; @path end
+	def map; @map end
+	def current; @current end
+	def destination; @destination end
+
+	# Initialization
+
+	def rebind(origin_node, geometries)
+		@current = origin_node
+		@map = geometries
+		@map.extend Map
+		@current.extend CurrentIntersection
+		@east_neighbor = map.east_neighbor_of(origin_node)
+		geometries.nodes.each {
+			|node|
+			node.extend Distance_labeled_graph_node
+		}
+		if @east_neighbor != nil
+			@east_neighbor.extend Neighbor
+		end
+		@south_neighbor = map.south_neighborOf(origin_node)
+		if @south_neighbor != nil
+			@south_neighbor.extend Neighbor
+		end
+	end
+
+	# public initialize. It's overloaded so that the public version doesn't
+	# have to pass a lot of crap; the initialize method takes care of
+	# setting up internal data structures on the first invocation. On
+	# recursion we override the defaults
+
+	def initialize(origin_node, target_node, geometries, path_vector = nil, unvisited_hash = nil, pathto_hash = nil)
+		@destination = target_node
+
+		rebind(origin_node, geometries)
+
+		# This has to come after rebind is done
+		if path_vector.nil?
+
+			# This is the fundamental data structure for Dijkstra's algorithm, called
+			# "Q" in the Wikipedia description. It is a boolean hash that maps a
+			# node onto false or true according to whether it has been visited
+			@unvisited = Hash.new
+
+			# These initializations are directly from the description of the algorithm
+			geometries.nodes.each { |node| @unvisited[node] = true }
+			@unvisited.delete(origin_node)
+			map.nodes.each { |node| node.set_tentative_distance_to(infinity) }
+			origin_node.set_tentative_distance_to(0)
+
+			# The path array is kept in the outermost context and serves to store the
+			# return path. Each recurring context may add something to the array along
+			# the way. However, because of the nature of the algorithm, individual
+			# Context instances don't deliver "partial paths" as partial answers.
+			@path = Array.new
+
+			# The pathTo map is a local associative array that remembers the
+			# arrows between nodes through the array and erases them if we
+			# re-label a node with a shorter distance
+			@pathTo = Hash.new
+
+		else
+			@unvisited = unvisited_hash
+			@path = path_vector
+			@pathTo = pathto_hash
+		end
+
+		execute
+	end
+
+
+	# There are four roles in the algorithm:
+	#
+	#	CurrentIntersection (@current)
+	#	EastNeighbor, which lies DIRECTLY to the east of CurrentIntersection (@east_neighbor)
+	#	SouthernNeighbor, which is DIRECTLy to its south (@south_neighbor)
+	#	Destination, the target node (@destination)
+	#
+	#	We also add a role of Map (@map) as the oracle for the geometry
+	#
+	# The algorithm is straight from Wikipedia:
+	#
+	#	http://en.wikipedia.org/wiki/Dijkstra's_algorithm
+	#
+	# and reads directly from the distance method, below
+
+	module Distance_labeled_graph_node
+
+		# NOTE: This role creates a new data member in the node into
+		#	which it is injected. An alernative implementation would
+		#	be to use a separate associative array
+
+		def tentative_distance; @tentative_distance_value end
+		def set_tentative_distance_to(x); @tentative_distance_value = x end
+	end
+
+	module CurrentIntersection
+
+		# Access to roles and other Context data
+
+		include ContextAccessor
+		def unvisited; context.unvisited end
+		def south_neighbor; context.south_neighbor end
+		def east_neighbor; context.east_neighbor end
+
+		def unvisited_neighbors
+			retval = Array.new
+			if south_neighbor != nil
+				if unvisited[south_neighbor] == true; retval << south_neighbor end
+			end
+			if east_neighbor != nil
+				if unvisited[east_neighbor] == true; retval << east_neighbor end
+			end
+			return retval
+		end
+	end
+
+	# This module serves to provide the methods both for the east_neighbor and south_neighbor roles
+
+	module Neighbor
+		include ContextAccessor
+
+		def relable_node_as(x)
+			if x < self.tentative_distance; self.set_tentative_distance_to(x); return true
+			else return false end
+		end
+	end
+
+	# "Map" as in cartography rather than Computer Science...
+	#
+	# Map is technically a role from the DCI perspective. The role
+	# in this example is played by an object representing a particular
+	# Manhattan geometry
+
+	module Map
+		include ContextAccessor
+
+		def distance_between(a, b)
+			return @distances[Pair.new(a, b)]
+		end
+
+		# These two functions presume always travelling
+		# in a southern or easterly direction
+
+		def next_down_the_street_from(x)
+			return east_neighbor_of(x)
+		end
+
+		def next_along_the_avenue_from(x)
+			return south_neighborOf(x)
+		end
+	end
+
+	# This is the method that does the work. Called from initialize
+
+	def execute
+		execute_in_context do
+			# Calculate tentative distances of unvisited neighbors
+			unvisited_neighbors = current.unvisited_neighbors
+
+			if unvisited_neighbors != nil
+				unvisited_neighbors.each { |neighbor|
+					if neighbor.relable_node_as(current.tentative_distance + map.distance_between(current, neighbor))
+						pathTo[neighbor] = current
+					end
+				}
+			end
+
+			unvisited.delete(current)
+
+			# Are we done?
+
+			if unvisited.size == 0
+				save_path(@path)
+			else
+
+				# The next current node is the one with the least distance in the
+				# unvisited set
+
+				selection = nearest_unvisited_node_to_target
+
+				# Recur
+				CalculateShortestPath.new(selection, destination, map, path, unvisited, pathTo)
+			end
+		end
+	end
+
+	def nearest_unvisited_node_to_target
+		min = infinity
+		selection = nil
+		unvisited.each_key { |intersection|
+			if unvisited[intersection]
+				if intersection.tentative_distance < min
+					min = intersection.tentative_distance
+					selection = intersection
+				end
+			end
+		}
+		return selection
+	end
+
+	def each
+		path.each { |node| yield node }
+	end
+
+	# This method does a simple traversal of the data structures (following pathTo)
+	# to build the directed traversal vector for the minimum path
+
+	def save_path(pathVector)
+		node = destination
+		begin
+			pathVector << node
+			node = pathTo[node]
+		end while node != nil
+	end
+
+end
+
+# This is the main Context for shortest distance calculation
+
+class CalculateShortestDistance
+	include ContextAccessor
+
+	def path; return @path end
+
+	module Map
+		include ContextAccessor
+
+		def distance_between(a, b)
+			return @distances[Pair.new(a, b)]
+		end
+
+		# These two functions presume always travelling
+		# in a southern or easterly direction
+
+		def next_down_the_street_from(x)
+			return east_neighbor_of(x)
+		end
+
+		def next_along_the_avenue_from(x)
+			return south_neighborOf(x)
+		end
+	end
+
+	module Distance_labeled_graph_node
+		#NOTE: This creates a new data member in the node
+		def tentative_distance; @tentative_distance_value end
+		def set_tentative_distance_to(x); @tentative_distance_value = x end
+	end
+
+	def rebind(origin_node, geometries)
+		@current = origin_node
+		@destination = geometries.destination
+		@map = geometries
+		@map.extend Map
+		@map.nodes.each {
+			|node|
+			node.extend Distance_labeled_graph_node
+		}
+	end
+
+	def initialize(origin_node, target_node, geometries)
+		rebind(origin_node, geometries)
+		@current.set_tentative_distance_to(0)
+		@path = CalculateShortestPath.new(@current, @destination, @map).path
+	end
+
+	def distance
+		retval = 0
+		previous_node = nil
+		path.reverse_each {
+			|node|
+			if previous_node.nil?
+				retval = 0
+			else
+				retval += @map.distance_between(previous_node, node)
+			end
+			previous_node = node
+		}
+		return retval
+	end
+end
+
+class ManhattanGeometry1
+	def initialize
+		@nodes = Array.new
+		@distances = Hash.new
+
+		names = [ "a", "b", "c", "d", "a", "b", "g", "h", "i"]
+
+		3.times { |i|
+			3.times { |j| @nodes << Node.new(names[(i*3)+j]) }
+		}
+
+		# Aliases to help set up the grid. Grid is of Manhattan form:
+		#
+		#	a - 2 - b - 3 -	c
+		#   |		|		|
+		#   1		2		1
+		#   |		|		|
+		#	d - 1 -	e - 1 -	f
+		#   |				|
+		#	2				4
+		#   |				|
+		#	g - 1 -	h - 2 -	i
+		#
+		@a = @nodes[0]
+		@b = @nodes[1]
+		@c = @nodes[2]
+		@d = @nodes[3]
+		@e = @nodes[4]
+		@f = @nodes[5]
+		@g = @nodes[6]
+		@h = @nodes[7]
+		@i = @nodes[8]
+
+		9.times { |i|
+			9.times { |j|
+				@distances[Pair.new(@nodes[i], @nodes[j])] = infinity
+			}
+		}
+
+		@distances[Pair.new(@a, @b)] = 2
+		@distances[Pair.new(@b, @c)] = 3
+		@distances[Pair.new(@c, @f)] = 1
+		@distances[Pair.new(@f, @i)] = 4
+		@distances[Pair.new(@b, @e)] = 2
+		@distances[Pair.new(@e, @f)] = 1
+		@distances[Pair.new(@a, @d)] = 1
+		@distances[Pair.new(@d, @g)] = 2
+		@distances[Pair.new(@g, @h)] = 1
+		@distances[Pair.new(@h, @i)] = 2
+		@distances[Pair.new(@d, @e)] = 1
+		@distances.freeze
+
+
+		@next_down_the_street_from = Hash.new
+		@next_down_the_street_from[@a] = @b
+		@next_down_the_street_from[@b] = @c
+		@next_down_the_street_from[@d] = @e
+		@next_down_the_street_from[@e] = @f
+		@next_down_the_street_from[@g] = @h
+		@next_down_the_street_from[@h] = @i
+		@next_down_the_street_from.freeze
+
+		@next_along_the_avenue_from = Hash.new
+		@next_along_the_avenue_from[@a] = @d
+		@next_along_the_avenue_from[@b] = @e
+		@next_along_the_avenue_from[@c] = @f
+		@next_along_the_avenue_from[@d] = @g
+		@next_along_the_avenue_from[@f] = @i
+		@next_along_the_avenue_from.freeze
+	end
+
+	def east_neighbor_of(a); @next_down_the_street_from[a] end
+	def south_neighborOf(a); @next_along_the_avenue_from[a] end
+
+	def root; return @a end
+	def destination; return @i end
+	def nodes; return @nodes end
+end
+
+class ManhattanGeometry2
+	def initialize
+		@nodes = Array.new
+		@distances = Hash.new
+
+		names = [ "a", "b", "c", "d", "a", "b", "g", "h", "i", "j", "k"]
+
+		11.times {  |j| @nodes << Node.new(names[j]) }
+
+		# Aliases to help set up the grid. Grid is of Manhattan form:
+		#
+		#	a - 2 - b - 3 -	c - 1 - j
+		#   |		|		|		|
+		#   1		2		1		|
+		#   |		|		|		|
+		#	d - 1 -	e - 1 -	f		1
+		#   |				|		|
+		#	2				4		|
+		#   |				|		|
+		#	g - 1 -	h - 2 -	i - 2 -	k
+		#
+		@a = @nodes[0]
+		@b = @nodes[1]
+		@c = @nodes[2]
+		@d = @nodes[3]
+		@e = @nodes[4]
+		@f = @nodes[5]
+		@g = @nodes[6]
+		@h = @nodes[7]
+		@i = @nodes[8]
+		@j = @nodes[9]
+		@k = @nodes[10]
+
+		11.times { |i|
+			11.times { |j|
+				@distances[Pair.new(@nodes[i], @nodes[j])] = infinity
+			}
+		}
+
+		@distances[Pair.new(@a, @b)] = 2
+		@distances[Pair.new(@b, @c)] = 3
+		@distances[Pair.new(@c, @f)] = 1
+		@distances[Pair.new(@f, @i)] = 4
+		@distances[Pair.new(@b, @e)] = 2
+		@distances[Pair.new(@e, @f)] = 1
+		@distances[Pair.new(@a, @d)] = 1
+		@distances[Pair.new(@d, @g)] = 2
+		@distances[Pair.new(@g, @h)] = 1
+		@distances[Pair.new(@h, @i)] = 2
+		@distances[Pair.new(@d, @e)] = 1
+		@distances[Pair.new(@c, @j)] = 1
+		@distances[Pair.new(@j, @k)] = 1
+		@distances[Pair.new(@i, @k)] = 2
+		@distances.freeze
+
+
+		@next_down_the_street_from = Hash.new
+		@next_down_the_street_from[@a] = @b
+		@next_down_the_street_from[@b] = @c
+		@next_down_the_street_from[@c] = @j
+		@next_down_the_street_from[@d] = @e
+		@next_down_the_street_from[@e] = @f
+		@next_down_the_street_from[@g] = @h
+		@next_down_the_street_from[@h] = @i
+		@next_down_the_street_from[@i] = @k
+		@next_down_the_street_from.freeze
+
+		@next_along_the_avenue_from = Hash.new
+		@next_along_the_avenue_from[@a] = @d
+		@next_along_the_avenue_from[@b] = @e
+		@next_along_the_avenue_from[@c] = @f
+		@next_along_the_avenue_from[@d] = @g
+		@next_along_the_avenue_from[@f] = @i
+		@next_along_the_avenue_from[@j] = @k
+		@next_along_the_avenue_from.freeze
+	end
+
+	def east_neighbor_of(a); @next_down_the_street_from[a] end
+	def south_neighborOf(a); @next_along_the_avenue_from[a] end
+
+	def root; return @a end
+	def destination; return @k end
+	def nodes; return @nodes end
+end
+
+# Test drivers
+
+geometries = ManhattanGeometry1.new
+path = CalculateShortestPath.new(geometries.root, geometries.destination, geometries)
+print "Path is: "; path.each {|node| print "#{node.name} " }; print "\n"
+puts "distance is #{CalculateShortestDistance.new(geometries.root, geometries.destination, geometries).distance}"
+
+puts("")
+
+geometries = ManhattanGeometry2.new
+path = CalculateShortestPath.new(geometries.root, geometries.destination, geometries)
+print "Path is: "
+last_node = nil
+path.each {
+	|node|
+		if last_node != nil; print " - #{geometries.distance_between(node, last_node)} - " end
+		print "#{node.name}"
+		last_node = node
+};
+print "\n"
+puts "distance is #{CalculateShortestDistance.new(geometries.root, geometries.destination, geometries).distance}"

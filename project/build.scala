@@ -2,47 +2,40 @@ import sbt._
 import sbt.Keys._
 
 object ScalaDCIBuild extends Build {
-  val buildScalaVersion = "2.10.0-RC3"
+  val buildVersion           = "0.2-SNAPSHOT"
+  val buildScalaVersion      = "2.11.0-SNAPSHOT"
+  val buildScalaOrganization = "org.scala-lang.macro-paradise"
 
-  val commonSettings = Defaults.defaultSettings ++ Seq(
+  val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.github.dci",
-    version := "0.1-SNAPSHOT",
+    version := buildVersion,
     scalaVersion := buildScalaVersion,
-    scalacOptions := Seq(
-      "-unchecked", "-deprecation", "-feature"
-      , "-language:implicitConversions"
-      , "-language:experimental.macros"
-    ),
-    libraryDependencies ++= Seq(
-      "org.scalatest" % "scalatest_2.10.0-RC2" % "2.0.M4",
-      "org.scala-lang" % "scala-actors" % buildScalaVersion,
-      "org.specs2" % "specs2_2.10.0-RC2" % "1.12.2",
-      "org.scalaj" % "scalaj-time_2.9.2" % "0.6"
-    ),
-    resolvers += Classpaths.typesafeSnapshots
+    scalaOrganization := buildScalaOrganization,
+    scalacOptions := Seq("-unchecked", "-deprecation", "-feature", "-language:implicitConversions", "-language:experimental.macros"),
+    libraryDependencies ++= Seq("org.scalatest" % "scalatest_2.10" % "2.0.M5b"),
+    resolvers += Resolver.sonatypeRepo("releases"),
+    resolvers += Resolver.sonatypeRepo("snapshots")
   )
 
   lazy val scaladci = Project(
-    id = "scaladci",
-    base = file("."),
-    settings = commonSettings
-  ) aggregate (scaladciCore)
+    "scaladci",
+    file("."),
+    settings = buildSettings
+  ) aggregate(scaladciCore, scaladciExamples)
 
   lazy val scaladciCore = Project(
-    id = "scaladci-core",
-    base = file("core"),
-    settings = commonSettings
-      ++ Seq(
-      libraryDependencies ++= Seq(
-        "org.scala-lang" % "scala-reflect" % buildScalaVersion,
-        "org.scala-lang" % "scala-compiler" % buildScalaVersion
-      )
+    "scaladci-core",
+    file("core"),
+    settings = buildSettings ++ Seq(
+      name := "ScalaDCI Core",
+      libraryDependencies += buildScalaOrganization % "scala-reflect" % buildScalaVersion
     )
   )
 
   lazy val scaladciExamples = Project(
-    id = "scaladci-examples",
-    base = file("examples"),
-    settings = commonSettings
+    "scaladci-examples",
+    file("examples"),
+    settings = buildSettings ++ Seq(
+      name := "ScalaDCI Examples")
   ) dependsOn (scaladciCore)
 }

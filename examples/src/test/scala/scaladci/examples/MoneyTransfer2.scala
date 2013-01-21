@@ -1,6 +1,7 @@
 package scaladci
-package examples.MoneyTransfer
+package MoneyTransfer2
 import scala.language.reflectiveCalls
+import DCI._
 
 case class LedgerEntry(message: String, amount: Int)
 
@@ -16,31 +17,29 @@ case class Account(account: String, initialLedgers: List[LedgerEntry]) {
   def decreaseBalance(amount: Int) { ledgers.addEntry("withdrawing", -amount) }
 }
 
-class MoneyTransfer(src: Account, dest: Account, amount: Int) extends Context {
-  private val source      = src.as[Source]
-  private val destination = dest.as[Destination]
+class MoneyTransfer(Source: Account, Destination: Account, amount: Int) extends Context {
 
   def transfer() {
-    source.transfer
+    Source.transfer
   }
 
-  private trait Source {self: Account =>
+  role(Source) {
     def withdraw() {
-      decreaseBalance(amount)
+      Source.decreaseBalance(amount)
     }
     def transfer() {
-      println("Source balance is: " + balance)
-      println("Destination balance is: " + destination.balance)
-      destination.deposit()
+      println("Source balance is: " + Source.balance)
+      println("Destination balance is: " + Destination.balance)
+      Destination.deposit()
       withdraw()
-      println("Source balance is now: " + balance)
-      println("Destination balance is now: " + destination.balance)
+      println("Source balance is now: " + Source.balance)
+      println("Destination balance is now: " + Destination.balance)
     }
   }
 
-  private trait Destination {self: Account =>
+  role(Destination) {
     def deposit() {
-      increaseBalance(amount)
+      Destination.increaseBalance(amount)
     }
   }
 }

@@ -1,0 +1,142 @@
+
+CalculateShortestPath = (function(){
+  var Initial,Neighbor,Current,Graph,Tentative,Unvisited,Path;
+  var Neighbor$visited = function () {
+      return !Unvisited.has(this);
+    };
+  var Current$markVisited = function () {
+      Unvisited.remove(this);
+    };
+  var Current$getNeighbors = function () {
+      return Graph$neighbors.call(Graph,this);
+    };
+  var Current$relaxDistances = function () {
+      Current$getNeighbors.call(Current).map(function(node) {
+        Neighbor = node;
+        if(Neighbor$visited.call(Neighbor)) return;
+
+        var alternate = Tentative.get(Current) + Current$distanceTo.call(Current,Neighbor);
+        if(alternate < Tentative.get(Neighbor)) {
+          Tentative.put(Neighbor, alternate);
+          Path.put(Neighbor, Current);
+        }
+      });
+    };
+  var Current$distanceTo = function (other) {
+      return Graph$distance.call(Graph,this, other);
+    };
+  var Graph$distance = function (from, to) {
+      if(from === to) return 0;
+      return this.nodes.get(from).get(to) || Infinity;
+    };
+  var Graph$neighbors = function (node) {
+      return this.nodes.get(node);
+    };
+  var Unvisited$findNearest = function () {
+      var nearest = undefined,
+        distance = Infinity;
+      this.map(function(node) {
+        var dist = Tentative.get(node);
+        if(dist < distance) {
+          nearest = node;
+          distance = dist;
+        }
+      })
+      return nearest;
+    };
+  var Path$to = function (to) {
+      var path = [to],
+        cur = to;
+      while(cur != Initial) {
+        cur = this.get(cur);
+        path.unshift(cur);
+        if(cur === undefined) {
+          return undefined;
+        }
+      }
+      return path;
+    };
+  return function (initial, destination, graph) {
+  Initial = initial;
+  Graph = graph;
+  Tentative = new ObjectMap();
+  Unvisited = new ObjectMap();
+  Path = new ObjectMap(); // best path (to --> from)
+  Graph.nodes.map(function(node) {
+    Unvisited.put(node);
+    Tentative.put(node, Infinity);
+  });
+  Tentative.put(Initial, 0);
+
+  Current = Initial;
+  Current$markVisited.call(Current);
+
+  while(!Unvisited.isEmpty()) {
+    Current$relaxDistances.call(Current);
+    Current$markVisited.call(Current);
+
+    if(!Unvisited.has(destination)) break;
+
+    Current = Unvisited$findNearest.call(Unvisited);
+    if(Current === undefined) break;
+  }
+  return Path$to.call(Path,destination);
+};})();
+
+function mkGraph(edges) {
+  var nodes = new ObjectMap();
+
+  var forceMap = function(node) {
+      var map = nodes.get(node);
+      if(map === undefined) {
+        map = new ObjectMap();
+        nodes.put(node, map);
+      }
+      return map;
+    };
+
+  for(var i = 0; i < edges.length; i += 1) {
+    var edge = edges[i],
+      from = edge[0],
+      to = edge[1],
+      dist = edge[2];
+
+    forceMap(to);
+    var cur = forceMap(from);
+    cur.put(to, dist);
+  }
+  return {
+    nodes: nodes
+  };
+}
+
+var a = {id:'a'},
+  b = {id:'b'},
+  c = {id:'c'},
+  d = {id:'d'},
+  e = {id:'e'},
+  f = {id:'f'},
+  g = {id:'g'},
+  h = {id:'h'},
+  i = {id:'i'};
+
+var edges = [
+  [a,b,2],
+  [a,d,1],
+  [b,c,3],
+  [b,e,2],
+  [c,f,1],
+  [d,e,1],
+  [d,g,2],
+  [e,f,1],
+  [f,i,4],
+  [g,h,1],
+  [h,i,2]];
+
+var graph = mkGraph(edges);
+var path = CalculateShortestPath(a, i, graph);
+
+var proper = [];
+for(var i = 0; i < path.length; i += 1)
+proper.push(path[i].id);
+log(proper.join(" -> "));

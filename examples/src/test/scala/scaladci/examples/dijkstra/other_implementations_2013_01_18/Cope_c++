@@ -1,0 +1,750 @@
+// Example in C++ - Dijkstra's algorithm in a programming style
+//	Modified and simplified for a Manhattan geometry with 3 roles
+//
+//
+// Demonstrates an example where:
+//      - objects of class Node play several roles simultaneously
+//        (albeit spread across Contexts: a Node can
+//        play the CurrentIntersection in one Context and an Eastern or Southern
+//        in another)
+//      - stacked Contexts (to implement recursion)
+//      - mixed access of objects of Node through different
+//        paths of role elaboration (the root is just a node,
+//        whereas others play roles)
+//      - there is a significant pre-existing data structure called
+//        a Map which contains the objects of instance. Where DCI
+//        comes in is to ascribe roles to those objects and let
+//        them interact with each other to evaluate the minimal
+//        path through the network
+//      - true to core DCI we are almost always concerned about
+//        what happens between the objects (paths and distance)
+//        rather than in the objects themselves (which have
+//        relatively uninteresting properties like "name")
+//      - equality of nodes is not identity, and several
+//        nodes compare equal with each other by standard
+//        equality (eql?)
+//      - returns references to the original data objects
+//        in a vector, to describe the resulting path
+//
+// There are some curiosities
+//      - EastNeighbor and SouthNeighbor were typographically equivalent,
+//        so I folded them into a single role: Neighbor. That type still
+//        serves the two original roles
+//      - Roles are truly scoped to the use case context
+//      - The Map and Distance_labeled_graph_node roles have to be duplicated in two Contexts
+//      - Node inheritance is replaced by injecting two roles
+//        into the object
+//      - Injecting some roles causes data objects to take on new
+//        data members. I can work around this by keeping the data
+//        in a separate associative vector, but this seems the
+//        right "Ruby way"
+//      - There is an intentional call to distance_between while the
+//        Context is still extant, but outside the scope of the
+//        Context itself. Should that be legal?
+
+// Global boilerplate
+
+#include <utility>
+#include <limits>
+#include <iostream>
+#include <string>
+#include <map>
+#include <list>
+#include "Context.h"
+
+
+inline int infinity(void)
+{
+    // infinity + infinity should still be a big number
+    return INT_MAX / 4;
+}
+
+
+#define TENTATIVE_DISTANCE_VALUES(x) (static_cast
+
+
+
+// ------------------------------------------------------
+// This is the main Context for shortest path calculation
+// ------------------------------------------------------
+
+template <class Geometry, typename NodeType>
+class CalculateShortestPath: public Context {
+public:
+    //  --------- Roles ----------------
+
+    // There are four roles in the algorithm:
+    //
+    //	CalculateShortestPathRoles::CurrentIntersection (@current)
+    //	EastNeighbor, which lies DIRECTLY to the east of CalculateShortestPathRoles::CurrentIntersection (@east_neighbor)
+    //	SouthernNeighbor, which is DIRECTLY to its south (@south_neighbor)
+    //	Destination, the target node (@destination)
+    //
+    //	We also add a role of Map (@map) as the oracle for the geometry
+    //
+    // The algorithm is straight from Wikipedia:
+    //
+    //	http://en.wikipedia.org/wiki/Dijkstra's_algorithm
+    //
+    // and reads directly from the distance method, below
+
+    // We can label any node with its distance from the origin. We label
+    // the node through this interface to it
+
+    class Distance_labeled_graph_node {
+    public:
+        int tentative_distance(void);
+        void set_tentative_distance_to(int y);
+    };
+
+    // This is a node in the map that plays the role of either a south or a west
+    // neighbor of the CurrentIntersection
+
+    class Neighbor {
+    public:
+        bool relable_node_as(int x) {
+            NodeType *self = static_cast<NodeType*>(const_cast<typename CalculateShortestPath<Geometry, NodeType>::Neighbor*>(this));
+            class CalculateShortestPath<Geometry, NodeType>::Distance_labeled_graph_node *dlnode =
+                static_cast<class CalculateShortestPath<Geometry, NodeType>::Distance_labeled_graph_node *>(self);
+            if (x < dlnode->tentative_distance()) {
+                dlnode->set_tentative_distance_to(x);
+                return true;
+            } else return false;
+        }
+    };
+
+    // This is a node in the map that plays the role of the current intersection
+
+    class CurrentIntersection {
+    public:
+        // Access to roles and other Context data
+
+        Neighbor *south_neighbor(void);
+        Neighbor *east_neighbor(void);
+        std::list<Neighbor*> unvisited_neighbors(void);
+    };
+
+    // Just a Node in the map
+
+    class Node
+    {
+    public:
+        std::string name(void) const { return NodeType::name(); }
+        Node(void) { }
+        bool operator==(const Node &other) { return NodeType::operator==(other); }
+    };
+
+    // "Map" as in cartography rather than Computer Science...
+    //
+    // Map is technically a role from the DCI perspective. The role
+    // in this example is played by an object representing a particular
+    // Manhattan geometry
+
+    class Map {
+    public:
+        int distance_between(NodeType *a, NodeType *b) {
+            Geometry *self = static_cast<Geometry*>(this);
+            int retval = self->distances()[std::pair<NodeType*, NodeType*>(a, b)];
+            return retval;
+        }
+
+        // These two functions presume always travelling
+        // in a southern or easterly direction
+
+        NodeType *next_down_the_street_from(NodeType *x) {
+            return Geometry::east_neighbor_of(x);
+        }
+
+        NodeType *next_along_the_avenue_from(NodeType *x) {
+            return Geometry::south_neighborOf(x);
+        }
+    };
+
+    // -------- Handy shorthand for code readability -------------
+
+    typedef class CalculateShortestPath<Geometry, NodeType> Context;
+
+private:    // --------- Data for the Context -----------------------------------
+
+    typedef typename std::map<NodeType*, bool> VisitedMap;
+    typedef typename std::map<NodeType*, NodeType*> NodeToNode;
+    typedef Map BoundMap;
+    typedef typename std::map<NodeType*, int> NodeIntMap;
+
+    VisitedMap unvisited_;
+    NodeToNode pathTo_;
+    std::list<NodeType*> &path_;
+    NodeType *destination_;
+    CurrentIntersection *current_;
+    Neighbor *east_neighbor_, *south_neighbor_;
+    Geometry &unmappedGeometry_;
+    BoundMap &theMap_;
+
+    // This map keeps the labels that we put on the nodes, indicating their current
+    // estimated best distance from the origin. It's part of the Distance_labelled_graph_node
+    // functionality, but we can't put data in roles, so we outboard it here in the
+    // Context where the Distance_labelled_graph_node methods can manage it.
+
+    NodeIntMap tentative_distance_values_;
+
+public:
+
+    // These are handles to internal housekeeping arrays, set up in initialize
+
+    bool &unvisited(NodeType *n) {
+        return unvisited_[n];
+    }
+
+    bool visited(NodeType *n) const {
+        if (unvisited_.find(n) == unvisited_.end()) return true; else return false;
+    }
+
+    VisitedMap &unvisiteds(void) {
+        return unvisited_;
+    }
+
+    NodeToNode &                 pathTo(void) { return pathTo_; }
+    std::list<NodeType*> &       path(void) { return path_; }
+    class Context::Neighbor *&   east_neighbor(void) { return east_neighbor_; }
+    class Context::Neighbor *&   south_neighbor(void) { return south_neighbor_; }
+    BoundMap &                   theMap(void) { return theMap_; }
+    CurrentIntersection *&       current(void) { return current_; }
+    NodeType *&                  destination(void) { return destination_; }
+    NodeIntMap &                 tentative_distance_values(void) { return tentative_distance_values_; }
+
+public:
+
+    // Initialization
+
+    void rebind(NodeType *origin_node, Geometry &geometries);
+
+
+    // public initialize. It's overloaded so that the public version doesn't
+    // have to pass a lot of crap; the initialize method takes care of
+    // setting up internal data structures on the first invocation. On
+    // recursion we override the defaults
+
+    void common_init(NodeType *origin_node,
+                	NodeType *target_node,
+                	Geometry &geometries,
+                	std::map<NodeType*, int> tentative_distances) {
+        destination_ = target_node;
+        rebind(origin_node, geometries);
+        tentative_distance_values_ = tentative_distances;
+    }
+
+    CalculateShortestPath(NodeType *origin_node,
+                          NodeType *target_node,
+                          Geometry &geometries);
+    CalculateShortestPath(NodeType *origin_node,
+                          NodeType *target_node,
+                          Geometry &geometries,
+                          std::list<NodeType*> &path_vector,
+                          std::map<NodeType*, bool> unvisited_hash,
+                          std::map<NodeType*,NodeType*> pathto_hash,
+                          std::map<NodeType*, int> tentative_distances);
+
+
+    // This is the method that does the work. Called from initialize. Broken out below.
+
+    void execute(void);
+
+    NodeType *nearest_unvisited_node_to_target(void);
+
+    void save_path(std::list<NodeType*> &path)
+    {
+        NodeType *node = destination();
+        do {
+            path.push_back(node);
+            node = pathTo()[node];
+        } while (node != NULL);
+    }
+
+};
+
+
+
+// ----------------- I N I T I A L I Z A T I O N -----------------
+
+template <typename Geometry, typename NodeType>
+CalculateShortestPath<Geometry, NodeType>::CalculateShortestPath(NodeType *origin_node,
+                                                                 NodeType *target_node,
+                                                                 Geometry &geometries):
+        path_(*(new std::list<NodeType*>())),    // comment below
+        unmappedGeometry_(geometries),
+        theMap_(geometries)
+{
+    // The path_ array is kept in the outermost context and serves to store the
+    // return path. Each recurring context may add something to the array along
+    // the way. However, because of the nature of the algorithm, individual
+    // Context instances don't deliver "partial paths" as partial answers.
+
+
+    common_init(origin_node, target_node, geometries, std::map<NodeType*, int>());
+
+    // All this has to come after rebind
+
+    // This is the fundamental data structure for Dijkstra's algorithm, called
+    // "Q" in the Wikipedia description. It is a boolean hash that maps a
+    // node onto false or true according to whether it has been visited
+    unvisited_ = std::map<NodeType*, bool>();
+
+    // These initializations are directly from the description of the algorithm
+
+    typedef typename std::list<NodeType*>::iterator NodeListIterator;
+    std::list<NodeType*> nodes = geometries.nodes();
+    for (NodeListIterator niter = nodes.begin(); niter != nodes.end(); niter++) {
+        NodeType *node = *niter;
+        unvisited_[node] = true;
+        node->set_tentative_distance_to(infinity());
+    }
+
+    unvisited_.erase(origin_node);
+    origin_node->set_tentative_distance_to(0);
+
+
+    // The pathTo map is a local associative array that remembers the
+    // arrows between nodes through the array and erases them if we
+    // re-label a node with a shorter distance
+
+    pathTo_ = std::map<NodeType*, NodeType*>();
+
+    execute();
+}
+
+
+template <typename Geometry, typename NodeType>
+CalculateShortestPath<Geometry, NodeType>::CalculateShortestPath(
+                                                NodeType *origin_node,
+                                                NodeType *target_node,
+                                                Geometry &geometries,
+                                                std::list<NodeType*> &path_vector,
+                                                std::map<NodeType*, bool> unvisited_hash,
+                                                std::map<NodeType*,NodeType*> pathto_hash,
+                                                std::map<NodeType*, int> tentative_distances):
+                                                path_(path_vector),
+                                                unmappedGeometry_(geometries),
+                                                theMap_(geometries)
+{
+    common_init(origin_node, target_node, geometries, tentative_distances);
+    unvisited_ = unvisited_hash;
+    pathTo_ = pathto_hash;
+
+    execute();
+}
+
+
+template <typename Geometry, typename NodeType>
+void CalculateShortestPath<Geometry, NodeType>::rebind(NodeType *origin_node, Geometry &geometries) {
+    current_ = static_cast<CurrentIntersection*> (origin_node);
+    east_neighbor_ = dynamic_cast<Neighbor*>(geometries.east_neighbor_of(origin_node));
+    south_neighbor_ = dynamic_cast<Neighbor*>(geometries.south_neighbor_of(origin_node));
+}
+
+// ----------------- E X E C U T I O N --------------------------
+
+
+template <typename Geometry, typename NodeType>
+void CalculateShortestPath<Geometry, NodeType>::execute(void) {
+
+    // Calculate tentative distances of unvisited neighbors
+
+    std::list<class Context::Neighbor*> unvisited_neighbors = current()->unvisited_neighbors();
+    NodeType *pcurrent = static_cast<NodeType*> (current());
+    Distance_labeled_graph_node *dcurrent = static_cast<Distance_labeled_graph_node *>(pcurrent);
+
+    if (unvisited_neighbors.size()) {
+        typedef typename std::list<class Context::Neighbor*>::iterator NodeIterator;
+        for (NodeIterator liter = unvisited_neighbors.begin(); liter != unvisited_neighbors.end(); liter++) {
+            NodeType* dneighbor = static_cast<NodeType*> (*liter);
+            Distance_labeled_graph_node *neighbor = static_cast<Distance_labeled_graph_node * > (dneighbor);
+            Neighbor *neighborAsNeighbor = static_cast<Neighbor *>(static_cast<NodeType*> (neighbor) );
+            const int jumped_distance = dcurrent->tentative_distance() + theMap_.distance_between(pcurrent, dneighbor);
+            if (neighborAsNeighbor->relable_node_as(jumped_distance)) {
+                pathTo_[dneighbor] = pcurrent;
+            }
+        }
+    }
+
+    UNVISITEDS.erase(pcurrent);
+
+    // Are we done?
+
+    if (UNVISITEDS.size() == 0) {
+        save_path(path());
+    } else {
+        // The next current node is the one with the least distance in the
+        // unvisited set
+
+        NodeType *selection = nearest_unvisited_node_to_target();
+
+        // Recur
+
+        Context next(selection, destination(), unmappedGeometry_, path(), UNVISITEDS, pathTo(), tentative_distance_values());
+    }
+}
+
+
+template <typename Geometry, typename NodeType>
+NodeType *CalculateShortestPath<Geometry, NodeType>::nearest_unvisited_node_to_target(void) {
+    int min = infinity();
+    NodeType *selection = NULL;
+    typedef typename std::map<NodeType*, bool>::iterator NodeMapIterator;
+    typedef typename CalculateShortestPath<Geometry, NodeType>::Distance_labeled_graph_node GraphNode;
+    for (NodeMapIterator miter = UNVISITEDS.begin(); miter != UNVISITEDS.end(); miter++) {
+        GraphNode *intersection = (*miter).first;
+        if (VISITED(intersection) == false) {
+            if (intersection->tentative_distance() < min) {
+                min = intersection->tentative_distance();
+                selection = static_cast<NodeType*>(intersection);
+            }
+        }
+    }
+    return selection;
+}
+
+
+template <typename Geometry, typename NodeType> int
+CalculateShortestPath<Geometry, NodeType>::Distance_labeled_graph_node::tentative_distance(void) {
+    int retval = TENTATIVE_DISTANCE_VALUES()[(NodeType*)this];
+    return retval;
+}
+
+template <typename Geometry, typename NodeType> void
+CalculateShortestPath<Geometry, NodeType>::Distance_labeled_graph_node::set_tentative_distance_to(int y) {
+    TENTATIVE_DISTANCE_VALUES()[(NodeType*)this] = y;
+}
+
+
+template <typename Geometry, typename NodeType> class
+CalculateShortestPath<Geometry, NodeType>::Neighbor *
+CalculateShortestPath<Geometry, NodeType>::CurrentIntersection::south_neighbor(void) { return SOUTH_NEIGHBOR; }
+
+template <typename Geometry, typename NodeType> class
+CalculateShortestPath<Geometry, NodeType>::Neighbor *
+CalculateShortestPath<Geometry, NodeType>::CurrentIntersection::east_neighbor(void) { return EAST_NEIGHBOR; }
+
+template <typename Geometry, typename NodeType>
+std::list<typename CalculateShortestPath<Geometry, NodeType>::Neighbor*>
+    CalculateShortestPath<Geometry, NodeType>::CurrentIntersection::unvisited_neighbors(void) {
+    std::list<typename CalculateShortestPath<Geometry, NodeType>::Neighbor*> retval;
+    if (this->south_neighbor() != NULL) {
+        if (VISITED(south_neighbor()) == false) {
+            retval.push_back(CalculateShortestPath<Geometry, NodeType>::CurrentIntersection::south_neighbor());
+        }
+    }
+    if (this->east_neighbor() != NULL) {
+        if (VISITED(east_neighbor()) == false) {
+            retval.push_back(CalculateShortestPath<Geometry, NodeType>::CurrentIntersection::east_neighbor());
+        }
+    }
+    return retval;
+}
+
+
+// ----------- Context for Calculating Shortest Distance -------------
+
+template <typename Geometry, typename NodeType>
+class CalculateShortestDistance : public Context {
+private:
+    typedef std::list<NodeType*> nodeList;
+    typedef typename nodeList::iterator iter_nodep;
+    std::list<NodeType*> path_;
+    NodeType *current_, *destination_;
+    Geometry theMap_;
+public:
+    std::list<NodeType*> path(void) { return path_; }
+    void rebind(NodeType *origin_node, Geometry geometries) {
+        current_ = origin_node;
+        destination_ = geometries.destination();
+    }
+    CalculateShortestDistance(NodeType *origin_node, NodeType *target_node, Geometry geometries):
+        theMap_(geometries)
+    {
+        rebind(origin_node, geometries);
+
+        CalculateShortestPath<Geometry, NodeType> pathå  (origin_node, target_node, geometries);
+        path_ = path.path();
+    }
+
+    int distance(void) {
+        int retval;
+        NodeType *previous_node = NULL;
+
+        for (std::reverse_iterator<iter_nodep> iter = path_.rbegin(); iter != path_.rend(); iter++) {
+            NodeType *node = *iter;
+            if (previous_node) {
+                retval += theMap_.distance_between(previous_node, node);
+            } else {
+                retval = 0;
+            }
+            previous_node = node;
+        }
+        return retval;
+    }
+};
+
+
+
+class ManhattanGeometry1Node;
+
+class ManhattanGeometry1: public CalculateShortestPath<ManhattanGeometry1, ManhattanGeometry1Node>::Map
+{
+private:
+    typedef ManhattanGeometry1Node LocalNode;
+    std::list<LocalNode*> nodes_;
+    std::map<std::pair<LocalNode*, LocalNode*>, int> distances_;
+    std::map<LocalNode*, LocalNode*> next_down_the_street_from, next_along_the_avenue_from;
+    LocalNode *a, *b, *c, *d, *e, *f, *g, *h, *i;
+public:
+    ManhattanGeometry1(void);
+
+
+    LocalNode *east_neighbor_of(LocalNode *a) { return next_down_the_street_from[a]; }
+    LocalNode *south_neighbor_of(LocalNode *a) { return next_along_the_avenue_from[a]; }
+
+    LocalNode *root(void) { return a; }
+    LocalNode *destination(void) { return i; }
+    std::list<LocalNode*> nodes(void) { return nodes_; }
+    std::map<std::pair<LocalNode*, LocalNode*>, int> &distances(void) {
+        return distances_;
+    }
+};
+
+class ManhattanGeometry1Node:
+    public CalculateShortestPath<ManhattanGeometry1, ManhattanGeometry1Node>::Node,
+    public CalculateShortestPath<ManhattanGeometry1, ManhattanGeometry1Node>::Neighbor,
+    public CalculateShortestPath<ManhattanGeometry1, ManhattanGeometry1Node>::CurrentIntersection,
+    public CalculateShortestPath<ManhattanGeometry1, ManhattanGeometry1Node>::Distance_labeled_graph_node {
+public:
+    std::string name(void) const { return name_; }
+    ManhattanGeometry1Node(std::string n): name_(n) { }
+    bool operator==(const ManhattanGeometry1Node &other) { return name_ == other.name_; }
+private:
+    std::string name_;
+};
+
+ManhattanGeometry1::ManhattanGeometry1(void) {
+
+    std::string names[] = {
+        "a", "b", "c", "d", "a", "b", "g", "h", "i"
+    };
+
+    for (int k = 0; k < 9; k++) {
+        nodes_.push_back(new LocalNode(names[k]));
+    }
+
+    # Aliases to help set up the grid. Grid is of Manhattan form:
+    #
+    #    a - 2 - b - 3 - c
+    #    |       |       |
+    #    1       2       1
+    #    |       |       |
+    #    d - 1 - e - 1 - f
+    #    |               |
+    #    2               4
+    #    |               |
+    #    g - 1 - h - 2 - i
+    #
+
+    std::map<int, LocalNode*> nodesMap_;
+    int y = 0;
+
+    std::list<LocalNode*>::iterator x = nodes_.begin();
+    nodesMap_[y++] = a = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = b = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = c = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = d = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = e = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = f = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = g = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = h = static_cast<LocalNode*>(*x++);
+    nodesMap_[y]   = i = static_cast<LocalNode*>(*x);
+
+
+    for (int l = 0; l < 9; l++) {
+        for (int j = 0; j < 9; j++) {
+            distances_[std::pair<LocalNode*, LocalNode*>(nodesMap_[l], nodesMap_[j])] = infinity();
+        }
+    }
+
+
+    distances_[std::pair<LocalNode*, LocalNode*>(a, b)] = 2;
+    distances_[std::pair<LocalNode*, LocalNode*>(a, d)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(b, c)] = 3;
+    distances_[std::pair<LocalNode*, LocalNode*>(b, e)] = 2;
+    distances_[std::pair<LocalNode*, LocalNode*>(c, f)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(d, g)] = 2;
+    distances_[std::pair<LocalNode*, LocalNode*>(d, e)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(e, f)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(f, i)] = 4;
+    distances_[std::pair<LocalNode*, LocalNode*>(g, h)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(h, i)] = 2;
+
+
+
+    next_down_the_street_from[a] = b;
+    next_down_the_street_from[b] = c;
+    next_down_the_street_from[d] = e;
+    next_down_the_street_from[e] = f;
+    next_down_the_street_from[g] = h;
+    next_down_the_street_from[h] = i;
+
+    next_along_the_avenue_from[a] = d;
+    next_along_the_avenue_from[b] = e;
+    next_along_the_avenue_from[c] = f;
+    next_along_the_avenue_from[d] = g;
+    next_along_the_avenue_from[f] = i;
+}
+
+
+
+class ManhattanGeometry2Node;
+
+class ManhattanGeometry2: public CalculateShortestPath<ManhattanGeometry2, ManhattanGeometry2Node>::Map
+{
+private:
+    typedef ManhattanGeometry2Node LocalNode;
+    std::list<LocalNode*> nodes_;
+    std::map<std::pair<LocalNode*, LocalNode*>, int> distances_;
+    std::map<LocalNode*, LocalNode*> next_down_the_street_from, next_along_the_avenue_from;
+    LocalNode *a, *b, *c, *d, *e, *f, *g, *h, *i, *j, *k;
+public:
+    ManhattanGeometry2(void);
+
+    LocalNode *east_neighbor_of(LocalNode *a) { return next_down_the_street_from[a]; }
+    LocalNode *south_neighbor_of(LocalNode *a) { return next_along_the_avenue_from[a]; }
+
+    LocalNode *root(void) { return a; }
+    LocalNode *destination(void) { return k; }
+    std::list<LocalNode*> nodes(void) { return nodes_; }
+    std::map<std::pair<LocalNode*, LocalNode*>, int> &distances(void) {
+        return distances_;
+    }
+};
+
+
+class ManhattanGeometry2Node:
+    public CalculateShortestPath<ManhattanGeometry2, ManhattanGeometry2Node>::Node,
+    public CalculateShortestPath<ManhattanGeometry2, ManhattanGeometry2Node>::Neighbor,
+    public CalculateShortestPath<ManhattanGeometry2, ManhattanGeometry2Node>::CurrentIntersection,
+    public CalculateShortestPath<ManhattanGeometry2, ManhattanGeometry2Node>::Distance_labeled_graph_node {
+public:
+    std::string name(void) const { return name_; }
+    ManhattanGeometry2Node(std::string n): name_(n) { }
+    bool operator==(const ManhattanGeometry2Node &other) { return name_ == other.name_; }
+private:
+    std::string name_;
+};
+
+ManhattanGeometry2::ManhattanGeometry2(void) {
+
+    std::string names[] = {
+        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"
+    };
+
+    for (int m = 0; m < 11; m++) {
+        nodes_.push_back(new LocalNode(names[m]));
+    }
+
+
+    # Aliases to help set up the grid. Grid is of Manhattan form:
+    #
+    #    a - 2 - b - 3 - c - 1 - j
+    #    |       |       |       |
+    #    1       2       1       |
+    #    |       |       |       |
+    #    d - 1 - e - 1 - f       1
+    #    |               |       |
+    #    2               4       |
+    #    |               |       |
+    #    g - 1 - h - 2 - i - 2 - k
+
+
+    std::map<int, ManhattanGeometry2Node*> nodesMap_;
+    int y = 0;
+
+    std::list<LocalNode*>::iterator x = nodes_.begin();
+    nodesMap_[y++] = a = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = b = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = c = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = d = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = e = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = f = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = g = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = h = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = i = static_cast<LocalNode*>(*x++);
+    nodesMap_[y++] = j = static_cast<LocalNode*>(*x++);
+    nodesMap_[y]   = k = static_cast<LocalNode*>(*x);
+
+
+
+    for (int l = 0; l < 11; l++) {
+        for (int j = 0; j < 11; j++) {
+            distances_[std::pair<LocalNode*, LocalNode*>(nodesMap_[l], nodesMap_[j])] = infinity();
+        }
+    }
+
+
+    distances_[std::pair<LocalNode*, LocalNode*>(a, b)] = 2;
+    distances_[std::pair<LocalNode*, LocalNode*>(a, d)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(b, c)] = 3;
+    distances_[std::pair<LocalNode*, LocalNode*>(b, e)] = 2;
+    distances_[std::pair<LocalNode*, LocalNode*>(c, f)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(c, j)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(d, g)] = 2;
+    distances_[std::pair<LocalNode*, LocalNode*>(d, e)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(e, f)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(f, i)] = 4;
+    distances_[std::pair<LocalNode*, LocalNode*>(g, h)] = 1;
+    distances_[std::pair<LocalNode*, LocalNode*>(h, i)] = 2;
+    distances_[std::pair<LocalNode*, LocalNode*>(i, k)] = 2;
+    distances_[std::pair<LocalNode*, LocalNode*>(j, k)] = 1;
+
+
+
+    next_down_the_street_from[a] = b;
+    next_down_the_street_from[b] = c;
+    next_down_the_street_from[c] = j;
+    next_down_the_street_from[d] = e;
+    next_down_the_street_from[e] = f;
+    next_down_the_street_from[g] = h;
+    next_down_the_street_from[h] = i;
+    next_down_the_street_from[i] = k;
+
+    next_along_the_avenue_from[a] = d;
+    next_along_the_avenue_from[b] = e;
+    next_along_the_avenue_from[c] = f;
+    next_along_the_avenue_from[d] = g;
+    next_along_the_avenue_from[f] = i;
+    next_along_the_avenue_from[j] = k;
+}
+
+
+
+int main (int argc, char * const argv[]) {
+    ManhattanGeometry1 geometries;
+    CalculateShortestPath<ManhattanGeometry1, ManhattanGeometry1Node> path(geometries.root(), geometries.destination(), geometries);
+    std::cout << "Path is ";
+    for (std::list<ManhattanGeometry1Node*>::iterator n = path.path().begin(); n != path.path().end(); n++) {
+        std::cout << (*n)->name() << " ";
+    }
+    std::cout << std::endl;
+
+    CalculateShortestDistance<ManhattanGeometry1, ManhattanGeometry1Node> path2(geometries.root(), geometries.destination(), geometries);
+    std::cout << "distance is " << path2.distance() << std::endl;
+    ManhattanGeometry2 geometries2;
+    CalculateShortestPath<ManhattanGeometry2, ManhattanGeometry2Node> path3 (geometries2.root(), geometries2.destination(), geometries2);
+    std::cout << "Path is ";
+    ManhattanGeometry2Node *last_node = NULL;
+    for (std::list<ManhattanGeometry2Node*>::iterator n = path3.path().begin(); n != path3.path().end(); n++) {
+        if (last_node) std::cout << " - " << geometries2.distance_between(*n, last_node) << " - ";
+        std::cout << (*n)->name();
+        last_node = *n;
+    }
+    std::cout << std::endl;
+
+    std::cout << "distance is " << CalculateShortestDistance<ManhattanGeometry2, ManhattanGeometry2Node>(geometries2.root(), geometries2.destination(), geometries2).distance() << std::endl;
+
+    return 0;
+}

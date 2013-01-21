@@ -1,200 +1,222 @@
 package scaladci
-import scala.reflect.macros.{Context => MacroContext}
+import language.dynamics
+import reflect.macros.{Context => MacroContext}
 
-trait PlayingRole
+object DCI {
 
-trait Context {
-  implicit protected class Binder[OBJ](val obj: OBJ) {
-    def as[ROLE] = macro Context.bind[OBJ, ROLE]
-  }
-}
+  // "Role Definition Method" - acting as keyword and placeholder for defining role methods. Will be discarded itself during transformation.
+  def role(instance: AnyRef)(roleMethods: => Unit) {}
 
-object Context {
-  type ROLEPLAYER = AnyRef
-
-  def bind[OBJ: c.WeakTypeTag, ROLE: c.WeakTypeTag](c: MacroContext): c.Expr[ROLEPLAYER] = {
+  // Type macro that transforms the DCI Context
+  def transformContext(c: MacroContext): c.Tree = {
     import c.universe._
+    import Flag._
 
-    // Constraint violations helper methods
-    def stop(violators: List[String], msg: String) {
-      if (!violators.isEmpty)
-        c.abort(c.enclosingPosition, "Constraint violation:\n" + msg + "\n- " + violators.mkString("\n- ") +
-          "\n### NOTE: IDE cursor will be where the macro call starts, not at the violation position!")
+    object debug {
+      def out(t: Any) { c.abort(c.enclosingPosition, t.toString) }
+      def compare(t1: Any, t2: Any = c.enclosingTemplate.body) { out(s"\n$t1\n-------------------\n$t2") }
+      def compareRaw(t1: Any, t2: Any = c.enclosingTemplate.body) { out(s"\n${showRaw(t1)}\n-------------------\n${showRaw(t2)}") }
+      def l(ts: List[Tree]) { out(code(ts)) }
+      def r(t: Any) { c.abort(c.enclosingPosition, showRaw(t)) }
+      def r(ts: List[Tree]) { out(raw(ts)) }
+      def lr(ts: List[Tree]) { out(code(ts) + "\n\n================\n" + raw(ts)) }
+      def code(ts: List[Tree]) = ts.map("\n----- " + _)
+      def raw(ts: List[Tree]) = ts.map("\n----- " + showRaw(_))
+      def err(t: Tree, msg: String) = { out(msg + t); t }
     }
-    val ctxTree = c.enclosingClass
-    val ctxMembers = ctxTree.symbol.asClass.typeSignature.members.sorted
-    def contextBody = ctxTree match {case ClassDef(_, contextName, _, Template(_, _, contextBody)) => contextBody }
+    import debug._
 
-    // Enforce Context parameters to be immutable val's
-    stop(ctxMembers.collect {
-      case v: TermSymbol if v.isParamAccessor && v.isVar => v.name.toString
-    }, "Please remove 'var' from the following Context parameters (only val's allowed):")
+    object ctx {
+      val template       = c.enclosingTemplate
+      val body           = template.body
+      val params         = body.collect { case param@ValDef(Modifiers(flags, _, _), name, _, _) if isParamAccessor(flags) => param }
+      val paramNames     = params.collect { case ValDef(_, name, _, _) => name.toString }
+      val fields         = body.collect { case field@ValDef(Modifiers(flags, _, _), _, _, _) if !isParamAccessor(flags) => field }
+      val methods        = body.collect { case method@DefDef(_, name, _, _, _, _) if name != nme.CONSTRUCTOR => method }
+      val roleDefMethods = body.collect { case roleDefMethod@Apply(Apply(Ident(TermName("role")), List(Ident(TermName(roleName)))), _) => roleDefMethod }
+      val roleNames      = roleDefMethods.map { case Apply(Apply(_, List(Ident(TermName(roleName)))), _) => roleName }
+      val roles          = roleDefMethods.collect {
+        case Apply(Apply(_, List(Ident(TermName(roleName)))), List(Block(roleBody, _))) =>
+          (roleName -> (roleBody collect {
+            case roleMethod@DefDef(_, roleMethodName, _, _, _, _) if roleMethodName != nme.CONSTRUCTOR => roleMethodName.toString
+          }))
+      }.toMap
+      def isParamAccessor(flags: FlagSet) = (flags.asInstanceOf[Long] & 1L << 29) != 0
 
-    /*
-    * Recursively looping through the AST to find violating uses of incoming Data objects.
-    *
-    * The Data objects are supposed to be manipulated through the self reference in Roles
-    * once the object has become a Role Player. If the Context also manipulates the Data
-    * outside the Roles things can get messy and seems to be avoided.
-    *
-    * A first (naive) approach would be to try to stop any object manipulation and still
-    * allow access to the data. But what types of manipulation can we expect? Is there a
-    * way to "catch them all". It seems hacky. I kept this approach (in the code below)
-    * just as an example of how we can recursively detect any tree structure at any
-    * nested level in the source code.
-    *
-    * A better approach might be to allow incoming "custom objects" (AnyRef objects
-    * created from classes - not Int, Boolean and other "constants") to be accessed only
-    * once and only for a Role assignment...? TODO
-    * */
-    case class dataViolation(testTerm: TermName) extends Transformer {
-      def abort(violator: String): Tree = {
-        stop(List(violator),
-          "Incoming Data objects are only allowed to be accessed or bound to Roles.\n" +
-            "The following modifications to Data objects are not allowed:"
-        )
-        c.Expr[String](Literal(Constant("satisfying return type of transform method - we won't get here"))).tree
+      //      r(body)
+    }
+
+    // AST transformers ====================================================================
+
+    // Context scope
+    object contextTransformer extends Transformer {
+      override def transform(contextTree: Tree): Tree = contextTree match {
+
+        // Transform roles
+
+        // role(paramIdentifier) {...}
+        case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(TermName(roleName)))), List(Block(roleBody, Literal(Constant(())))))
+          if ctx.paramNames.contains(roleName) =>
+          val newRoleBody = roleTransformer(roleName).transformTrees(roleBody)
+          val newRoleDef = Apply(Apply(Ident(TermName("role")), List(Ident(TermName(roleName)))), List(Block(newRoleBody, Literal(Constant(())))))
+//                    compare(roleDef, newRoleDef)
+          newRoleDef
+
+
+        // role(fieldIdentifier) {...}
+        case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(TermName(roleName)))), List(Block(roleBody, Literal(Constant(()))))) =>
+          val newRoleBody = roleTransformer(roleName).transformTrees(roleBody)
+          val newRoleDef = Apply(Apply(Ident(TermName("role")), List(Ident(TermName(roleName)))), List(Block(newRoleBody, Literal(Constant(())))))
+//                    compare(roleDef, newRoleDef)
+          newRoleDef
+
+        // role("someString") {...}
+        case roleDef@Apply(Apply(Ident(TermName("role")), List(Literal(Constant(roleNameString)))), List(Block(roleBody, Literal(Constant(()))))) =>
+          out("Strings as role name identifiers are not allowed. Please use variable instead. Found: \"" + roleNameString.toString + "\"")
+          EmptyTree
+
+        // Disallow return values from role definitions
+        case roleDef@Apply(Apply(Ident(TermName("role")), List(Literal(Constant(roleName)))), List(Block(_, returnValue))) =>
+          out(s"A role definition is not allowed to return a value." +
+            s"\nPlease remove the following return code from the '$roleName' role:" +
+            s"\n$returnValue\n------------\n${showRaw(roleDef)}\n------------\n$roleDef")
+          EmptyTree
+
+        case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(TermName(roleName)))), List(Block(x, returnValue))) =>
+          out(s"A role definition is not allowed to return a value." +
+            s"\nPlease remove the following return code from the $roleName role:" +
+            s"\n$returnValue\n------------\n${showRaw(roleDef)}\n------------\n$roleDef")
+          EmptyTree
+
+        // Transform context tree recursively
+        case _ => super.transform(contextTree)
       }
+    }
 
-      override def transform(tree: Tree): Tree = {
-        tree match {
-          case Assign(Select(x@Ident(obj), field), _) if obj == testTerm =>
-            abort(s"Line ${x.pos.line}: Assigning a value to ${obj.toString}.${field.toString}")
+    // Role scope
+    case class roleTransformer(roleName: String) extends Transformer {
+      override def transform(roleTree: Tree): Tree = roleTree match {
 
-//          case Apply(Select(x@Ident(obj), method), _) if obj == testTerm =>
-//            abort(s"Line ${x.pos.line}: Calling ${obj.toString}.${method.toString}(...)")
-//
-//          case Apply(TypeApply(Select(x@Ident(obj), method), _), _) if obj == testTerm =>
-//            abort(s"Line ${x.pos.line}: Calling ${obj.toString}.${method.toString}(...)")
+        // Transform role method
+        case roleMethod@DefDef(x1, roleMethodName, x2, x3, x4, roleMethodBody) => {
 
-//          case ValDef(_, variable, TypeTree(), x@Ident(obj)) if obj == testTerm =>
-//            abort(s"Line ${x.pos.line}: Assigning Data objects to variables ($variable = ${obj.toString})")
+          // Prefix role method name
+          // roleMethod => RoleName_roleMethod
+          val newRoleMethodName = TermName(roleName + "_" + roleMethodName.toString)
+          //          compare(roleMethodName, newRoleMethodName)
 
-          case _ => super.transform(tree) // recursive call into the "remaining" tree structure
+          // Transform role method body
+          val newRoleMethodBody = roleMethodTransformer(roleName).transform(roleMethodBody)
+          //          compare(roleMethodBody, newRoleMethodBody)
+          //          compareRaw(roleMethodBody, newRoleMethodBody)
+
+          // Build role method AST
+          val newRoleMethod = DefDef(Modifiers(PRIVATE), newRoleMethodName, x2, x3, x4, newRoleMethodBody)
+//                    compare(roleMethod, newRoleMethod)
+
+          newRoleMethod
         }
+
+        // Disallow any other code (only role methods allowed on top level)
+        case otherCodeInRole =>
+          //          r(otherCodeInRole)
+          out(s"Roles are only allowed to define methods.\n" +
+            s"Please remove the following code from the $roleName role:" +
+            s"\n$otherCodeInRole\n----------------------")
+          EmptyTree
       }
     }
-    ctxMembers.collect {
-      case param: TermSymbol if param.isParamAccessor => dataViolation(newTermName(param.name.toString)).transform(ctxTree)
-    }
 
-    // Enforce val/var's in Context to be private
-    stop(ctxMembers.collect {
-      case v: TermSymbol if (v.isVal || v.isVar) && !v.isParamAccessor && (v.getter.isProtected || v.getter.isPublic) && v.getter.isTerm => v.name.toString
-      //    }, "Please mark the following Context val/var's as private:")
-    }, "Please mark the following Context val/var's as private:")
+    // Role method scope
+    case class roleMethodTransformer(roleName: String) extends Transformer {
+      override def transform(roleMethodTree: Tree): Tree = roleMethodTree match {
 
-    // Enforce Role traits in Context to be private
-    stop(ctxMembers.collect {
-      case t: ClassSymbol if t.isTrait && !t.isPrivate => t.name.toString
-    }, "Please mark the following Role traits as private:")
+        // Disallow nested role definitions
+        case nestedRoleDef@Apply(Apply(Ident(TermName("role")), List(Ident(TermName(nestedRoleName)))), _) =>
+          out(s"Nested role definitions are not allowed.\nPlease remove nested role '$nestedRoleName' inside the $roleName role.")
+          EmptyTree
 
-    // Prevent state in Roles
-    stop(ctxMembers.collect {
-      case t: ClassSymbol if {t.isTrait && !t.typeSignature.members.collect { case v: TermSymbol if (v.isVal || v.isVar) => v}.isEmpty} => t.name.toString
-    }, "Please remove any state (val/var's) from the following Role traits:")
+        // Transform internal role method calls
+        // roleMethod(..) => Role_roleMethod(..)
+        case roleMethodRef@Ident(TermName(methodName)) if ctx.roles(roleName).contains(methodName) =>
+          val newRoleMethodRef = Ident(TermName(roleName + "_" + methodName))
+          //          compare(roleMethodRef, newRoleMethodRef)
+          newRoleMethodRef
 
-    // Prevent Role assignment in Role traits
-    stop(contextBody.collect {
-      case ClassDef(_, roleName, _, Template(_, _, roleBody)) if {
-        """TypeApply\(Select\(Ident\(newTermName\(\"\w+\"\)\), newTermName\(\"as\"\)\)\, List\(Ident\(newTypeName\(\"\w+\"\)\)\)\)""".r.findFirstIn(showRaw(roleBody)).isDefined
-      } => roleName.toString
-    }, "Please move Role binding from the following Roles to the Context:")
+        // Disallow `this` in role methods
+        case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
+          out(s"`this` in a role method points to the Context and is not allowed. Please access Context members directly if needed.")
+          EmptyTree
 
-
-    // Todo: Prevent that an object can play more than one Role at a time...
-
-    // Bind Object to Role
-
-    val objType = weakTypeOf[OBJ]
-    val rolePlayerMarkerTrait = c.mirror.staticClass("scaladci.PlayingRole")
-    val selfClasses = {
-      if (objType.typeSymbol.asClass.isCaseClass) {
-        // e.g. 'Account' (self)
-        List(objType.typeSymbol.asClass)
-      } else {
-        val allClasses = objType.baseClasses.tail.takeWhile(_.name.toString != "Serializable").reverse
-        if (allClasses.contains(rolePlayerMarkerTrait)) {
-          // e.g. 'Account with Log with PlayingRole with Source' (Role Player)
-          allClasses.takeWhile(_.name.toString != "PlayingRole")
-        } else {
-          // e.g. 'Account with Log' (self with traits)
-          allClasses
-        }
+        // Transform role method tree recursively
+        case x => super.transform(roleMethodTree)
       }
     }
-    val selfBaseClasses = objType.baseClasses.collect { case cl: ClassSymbol if cl.isClass => cl}
-    if (selfBaseClasses.isEmpty) c.abort(c.enclosingPosition, s"Try compiling production classes first... ??")
-    val selfBaseClass = selfBaseClasses.head
 
-    val objParam = ValDef(NoMods, newTermName("obj"), TypeTree(selfBaseClass.toType), EmptyTree)
-    val fieldNames = selfBaseClass.toType.members.sorted.collect { case x: TermSymbol if x.isCaseAccessor && x.isMethod => x.name}
-    val superArgs = fieldNames map (fieldName => Select(Ident(objParam.name), fieldName))
+    object roleMethodCalls extends Transformer {
+      def isRoleMethod(qualifier: String, identifier: String) = {
+        !ctx.roleDefMethods.isEmpty &&
+          ctx.roles.contains(qualifier) &&
+          ctx.roles(qualifier).contains(identifier)
+      }
 
-    val selfIdentifiers = selfClasses map (selfClass => Ident(selfClass))
-    val rolePlayerMarker = Ident(rolePlayerMarkerTrait)
-    val roleIdentifier = Ident(weakTypeOf[ROLE].typeSymbol.asClass)
-    val rolePlayerIdentifiers = selfIdentifiers ::: List(rolePlayerMarker, roleIdentifier)
+      override def transform(contextTree: Tree): Tree = contextTree match {
 
-    val anonymousClass = c.fresh("$anon")
-    val rolePlayer = Block(
-      ClassDef(Modifiers(Flag.FINAL), newTypeName(anonymousClass), List(), Template(rolePlayerIdentifiers, emptyValDef, List(
-        DefDef(Modifiers(), nme.CONSTRUCTOR, List(), List(
-          List(ValDef(Modifiers(), newTermName("obj"), TypeTree(selfBaseClass.toType), EmptyTree))), TypeTree(),
-          Block(List(Apply(
-            Select(Super(This(newTypeName("")), newTypeName("")), nme.CONSTRUCTOR), superArgs)),
-            Literal(Constant(()))))))),
-      New(Ident(newTypeName(anonymousClass)), List(List(Select(c.prefix.tree, newTermName("obj"))))))
+        // Transform role method calls
 
-//    c.abort(c.enclosingPosition, s"RESULT:\n${rolePlayer}\n${showRaw(rolePlayer)}")
-    c.Expr(rolePlayer)
+        // RoleName.roleMethod(params..) => RoleName_roleMethod(params..)
+        case methodRef@Apply(Select(Ident(TermName(qualifier)), TermName(identifier)), List(params))
+          if isRoleMethod(qualifier, identifier) =>
+          val newMethodRef = Apply(Ident(TermName(qualifier + "_" + identifier)), List(params))
+          //          compare(methodRef, newMethodRef)
+          newMethodRef
+
+        // RoleName.roleMethod() => RoleName_roleMethod()
+        case methodRef@Apply(Select(Ident(TermName(qualifier)), TermName(identifier)), List())
+          if isRoleMethod(qualifier, identifier) =>
+          val newMethodRef = Apply(Ident(TermName(qualifier + "_" + identifier)), List())
+          //          compare(methodRef, newMethodRef)
+          newMethodRef
+
+        // RoleName.roleMethod => RoleName_roleMethod
+        case methodRef@Select(Ident(TermName(qualifier)), TermName(identifier))
+          if isRoleMethod(qualifier, identifier) =>
+          val newMethodRef = Ident(TermName(qualifier + "_" + identifier))
+          //          compare(methodRef, newMethodRef)
+          newMethodRef
+
+        // Transform tree recursively
+        case _ => super.transform(contextTree)
+      }
+    }
+
+    // "Globalize" role methods (Role.roleMethod => Role_roleMethod)
+    def globalizeRoleMethodsToContext(contextBody: List[Tree]) = contextBody.flatMap {
+      case roleDef@Apply(Apply(_, List(Ident(TermName(roleName)))), List(Block(roleBody, _))) => roleBody.collect {
+        case roleMethod@DefDef(_, roleMethodName, _, _, _, _) if roleMethodName != nme.CONSTRUCTOR => roleMethod
+      }
+      case otherContextElement => List(otherContextElement)
+    }
+
+    // Transform Context ====================================================================
+
+    // AST transformation phases
+    var contextTree: List[Tree] = c.enclosingTemplate.body
+    contextTree = roleMethodCalls.transformTrees(contextTree)
+    contextTree = contextTransformer.transformTrees(contextTree)
+    contextTree = globalizeRoleMethodsToContext(contextTree)
+//    lr(contextTree)
+
+    // Uncomment any of these to see the developing new AST (optionally place them somewhere between the different phases above).
+//        out(contextTree)
+    //    compare(ctx.body, contextTree)
+    //    compareRaw(ctx.body, contextTree)
+
+    // Return new context template
+    Template(Nil, emptyValDef, contextTree)
   }
+
+  // DCI Context
+  type Context =
+  macro transformContext
 }
-
-/* Generates the following code for the Role Player 'Account with Source'
-{
-  final class $anon1 extends Account with PlayingRole with Source {
-    def <init>(obj: scaladci.examples.MoneyTransfer2Test.Account) = {
-      super.<init>(obj.acc, obj.balance);
-      ()
-    }
-  };
-  new $anon1(MoneyTransfer.this.obj2binder[scaladci.examples.MoneyTransfer2Test.Account](MoneyTransfer.this.acc1).obj)
-}
-
-AST:
-
-Block(
-  List(
-    ClassDef(
-      Modifiers(FINAL),
-      newTypeName("$anon1"),
-      List(),
-      Template(
-        List(
-          Ident(scaladci.examples.MoneyTransfer2Test.Account),
-          Ident(scaladci.PlayingRole),
-          Ident(newTypeName("Source"))),
-        emptyValDef,
-        List(
-          DefDef(
-            Modifiers(),
-            nme.CONSTRUCTOR,
-            List(),
-            List(List(ValDef(Modifiers(), newTermName("obj"), TypeTree(), EmptyTree))),
-            TypeTree(),
-            Block(
-              List(Apply(
-                Select(Super(This(tpnme.EMPTY), tpnme.EMPTY), nme.CONSTRUCTOR),
-                List(Select(Ident(newTermName("obj")), newTermName("acc")), Select(Ident(newTermName("obj")), newTermName("balance"))))),
-              Literal(Constant(())))))))),
-  Apply(
-    Select(New(Ident(newTypeName("$anon1"))), nme.CONSTRUCTOR),
-    List(
-      Select(
-        Apply(
-          TypeApply(Select(This(newTypeName("MoneyTransfer")), newTermName("obj2binder")), List(TypeTree())),
-          List(Select(This(newTypeName("MoneyTransfer")), newTermName("acc1")))),
-        newTermName("obj")))))
-
-*/
