@@ -1,5 +1,5 @@
 package scaladci
-package MoneyTransfer1
+package examples.MoneyTransfer1
 import DCI._
 
 case class Account(name: String, var balance: Int) {

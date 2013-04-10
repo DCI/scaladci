@@ -1,5 +1,5 @@
 package scaladci
-package MoneyTransfer2
+package examples.MoneyTransfer2
 import scala.language.reflectiveCalls
 import DCI._
 

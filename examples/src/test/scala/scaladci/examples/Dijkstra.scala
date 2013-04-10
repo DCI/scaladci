@@ -1,6 +1,7 @@
 package scaladci.examples
 import collection.mutable
 import scaladci.DCI._
+
 object Dijkstra extends App {
 
   class Dijkstra(

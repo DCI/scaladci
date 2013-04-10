@@ -5,7 +5,7 @@ import reflect.macros.{Context => MacroContext}
 object DCI {
 
   // "Role Definition Method" - acting as keyword and placeholder for defining role methods. Will be discarded itself during transformation.
-  def role(instance: AnyRef)(roleMethods: => Unit) {}
+  def role(instance: Any)(roleMethods: => Unit) {}
 
   // Type macro that transforms the DCI Context
   def transformContext(c: MacroContext): c.Tree = {

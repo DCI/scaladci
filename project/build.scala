@@ -2,7 +2,7 @@ import sbt._
 import sbt.Keys._
 
 object ScalaDCIBuild extends Build {
-  val buildVersion           = "0.2-SNAPSHOT"
+  val buildVersion           = "0.2.1"
   val buildScalaVersion      = "2.11.0-SNAPSHOT"
   val buildScalaOrganization = "org.scala-lang.macro-paradise"
 
