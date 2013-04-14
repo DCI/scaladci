@@ -1,5 +1,5 @@
 package scaladci
-package examples
+package examples.shoppingcart
 import DCI._
 import scala.collection.mutable
 
@@ -11,7 +11,7 @@ See discussion at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
 
 ===========================================================================
-USE CASE:	Place Order [user-goal]
+USE CASE 1:	Place Order [user-goal]
 
 Person browsing around finds product(s) in a web shop that he/she wants to buy.
 
@@ -240,7 +240,7 @@ object TestPlaceOrder extends App {
     // Ok, no new car today
     order.removeItem(BMW)
     println(s"@@ Deviation 5a.1.a: Remove unaffordable item from cart" +
-      s"\n${order.getCurrentItems.mkString("\n")}\n")
+      s"\n${order.getCurrentItems.mkString("\n")}")
 
     // Let's get some wax anyway...
     order.addItem(1)
