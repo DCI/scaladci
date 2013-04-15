@@ -1,5 +1,5 @@
 package scaladci
-package examples.shoppingcart
+package examples.shoppingcart1
 import DCI._
 import scala.collection.mutable
 
@@ -27,7 +27,7 @@ Main Success Scenario
 3. Customer requests to review Order.
 4. Shop presents Cart with Items and prices to Customer.
 5. Customer pays Order.
-6. Shop delivers Product(s) to Customer.
+6. Shop confirms purchase to Customer.
 
 Deviations
 ---------------------------------------------------------------------------
@@ -73,7 +73,35 @@ class PlaceOrder(Shop: Company, Customer: Person) extends Context {
   def pay = Customer.payOrder
 
   // Roles
+  private val Warehouse = Shop
   private val Cart = Order(Customer)
+
+  role(Customer) {
+    def payOrder: Boolean = {
+      // Sufficient funds?
+      val orderTotal = Cart.total
+      if (orderTotal > Customer.cash)
+        return false
+
+      // Transfer ownership of items
+      Customer.owns ++= Cart.items
+      Customer.cash -= orderTotal
+      Cart.items.foreach(i => Warehouse.stock.remove(i._1))
+      Shop.receivePayment(orderTotal)
+      true
+    }
+    def isGoldMember = Shop.goldMembers.contains(Customer)
+    def reduction = if (Customer.isGoldMember) 0.5 else 1
+  }
+
+  role(Shop) {
+    def receivePayment(amount: Int) {Shop.cash += amount}
+  }
+
+  role(Warehouse) {
+    def has(productId: Int) = Shop.stock.isDefinedAt(productId)
+  }
+
   role(Cart) {
     def addItem(productId: Int): Option[Product] = {
       // Check warehouse
@@ -98,37 +126,6 @@ class PlaceOrder(Shop: Company, Customer: Person) extends Context {
 
     def total = Cart.items.map(_._2.price).sum
   }
-
-  role(Customer) {
-    def payOrder: Boolean = {
-      // Sufficient funds?
-      val orderTotal = Cart.total
-      if (orderTotal > Customer.cash)
-        return false
-
-      // Transfer ownership of items
-      Customer.owns ++= Cart.items
-      Customer.cash -= orderTotal
-      Cart.items.foreach(i => Warehouse.stock.remove(i._1))
-      Shop.receivePayment(orderTotal)
-      true
-    }
-    def isGoldMember = Shop.goldMembers.contains(Customer)
-    def reduction = if (Customer.isGoldMember) 0.5 else 1
-  }
-
-  // Example of an object playing multiple Roles in the same Context:
-  // Our company can play both a:
-  // Shop - selling products to ordinary customers and gold members
-  // Warehouse - managing a stock of products
-  // (In a real world application a warehouse would of course be a separate thing)
-  role(Shop) {
-    def receivePayment(amount: Int) {Shop.cash += amount}
-  }
-  private val Warehouse = Shop
-  role(Warehouse) {
-    def has(productId: Int) = Shop.stock.isDefinedAt(productId)
-  }
 }
 
 // Environment (Controller or the like...)
@@ -148,12 +145,11 @@ object TestPlaceOrder extends App {
       "\n--------------------------------------------------" +
       s"\n- Customer cash: ${customer.cash}" +
       s"\n- Customer owns: ${customer.owns.toIndexedSeq.sortBy(_._1).mkString("\n")}" +
-      s"\n- Shop cash : ${shop.cash}" +
-      s"\n- Shop stock: \n${shop.stock.toIndexedSeq.sortBy(_._1).mkString("\n")}\n"
+      s"\n- Shop cash : ${shop.cash}\n"
     )
   }
   reset()
-  showResult("Initial data:")
+  showResult("SHOPPING CART 1")
 
   // Various scenarios
   {

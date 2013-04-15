@@ -1,5 +1,6 @@
 package scaladci
-package examples.shoppingcart2
+package examples.shoppingcart4
+
 import DCI._
 import scala.collection.mutable
 
@@ -71,10 +72,8 @@ case class Order(customer: Person) {
 class PlaceOrder(Shop: Company, Customer: Person) extends Context {
 
   // Trigger methods
-  def customerMarksDesiredProductInShop(productId: Int): Option[Product] = {
-    DesiredProduct = productId
-    Customer.markDesiredProductInShop
-  }
+  def customerMarksDesiredProductInShop(productId: Int): Option[Product] =
+    Customer.markDesiredProductInShop(productId)
   def customerRequestsToReviewOrder: Seq[(Int, Product)] =
     Customer.reviewOrder
   def customerPaysOrder: Boolean =
@@ -83,57 +82,40 @@ class PlaceOrder(Shop: Company, Customer: Person) extends Context {
     Customer.removeProductFromCart(productId)
 
   // Roles
-  private var DesiredProduct: Int = _
-  private val Warehouse = Shop
-  private val Cart = Order(Customer)
-
   role(Customer) {
-    def markDesiredProductInShop = Shop.addProductToOrder
-    def reviewOrder = Cart.getItems
-    def removeProductFromCart(productId: Int) = Cart.removeItem(productId: Int)
-    def payOrder = Shop.processOrder
-
-    def availableFunds = Customer.cash
-    def withDrawFunds(amountToPay: Int) { Customer.cash -= amountToPay }
-  }
-
-  role(Shop) {
-    def addProductToOrder(): Option[Product] = {
-      if (!Warehouse.hasDesiredProduct)
+    def markDesiredProductInShop(productId: Int): Option[Product] = {
+      if (!Shop.stock.isDefinedAt(productId))
         return None
-      val product = Warehouse.reserveDesiredProduct
-      val discountedPrice = Shop.discountPriceOf(product)
+      val product = Shop.stock(productId)
+      val discountedPrice = Customer.getMemberPriceOf(product)
       val desiredProduct = product.copy(price = discountedPrice)
-      Cart.addItem(DesiredProduct, desiredProduct)
+      Cart.addItem(productId, desiredProduct)
       Some(desiredProduct)
     }
-    def processOrder: Boolean = {
+    def reviewOrder = Cart.getItems
+    def removeProductFromCart(productId: Int) = Cart.removeItem(productId: Int)
+    def payOrder: Boolean = {
       val orderTotal = Cart.total
-      if (orderTotal > Customer.availableFunds)
+      if (orderTotal > Customer.cash)
         return false
 
-      Customer.withDrawFunds(orderTotal)
-      Shop.depositFunds(orderTotal)
+      Customer.cash -= orderTotal
+      Shop.cash += orderTotal
 
       // just for debugging...
       Customer.owns ++= Cart.items
       true
     }
-    def discountPriceOf(product: Product) = {
+
+    def getMemberPriceOf(product: Product) = {
       val customerIsGoldMember = Shop.goldMembers.contains(Customer)
+      val goldMemberReduction = 0.5
       val discountFactor = if (customerIsGoldMember) goldMemberReduction else 1
       (product.price * discountFactor).toInt
     }
-    def goldMemberReduction = 0.5
-    def customerIsGoldMember = Shop.goldMembers.contains(Customer)
-    def depositFunds(amount: Int) { Shop.cash += amount }
   }
 
-  role(Warehouse) {
-    def hasDesiredProduct = Shop.stock.isDefinedAt(DesiredProduct)
-    def reserveDesiredProduct = Shop.stock(DesiredProduct) // dummy reservation
-  }
-
+  private val Cart = Order(Customer)
   role(Cart) {
     def addItem(productId: Int, product: Product) {
       Cart.items.put(productId, product)
@@ -169,7 +151,7 @@ object TestPlaceOrder extends App {
     )
   }
   reset()
-  showResult("SHOPPING CART 2")
+  showResult("SHOPPING CART 4")
 
   // Various scenarios
   {
@@ -255,7 +237,7 @@ object TestPlaceOrder extends App {
     // Ok, no new car today
     placeOrder.customerRemovesProductFromCart(BMW)
     println(s"@@ Deviation 3a.1.a: Customer removes unaffordable item from cart\n" +
-      placeOrder.customerRequestsToReviewOrder.mkString("\n") + "\n")
+      placeOrder.customerRequestsToReviewOrder.mkString("\n"))
 
     // Let's get some wax anyway...
     placeOrder.customerMarksDesiredProductInShop(1)

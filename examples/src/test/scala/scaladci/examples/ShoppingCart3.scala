@@ -1,5 +1,6 @@
 package scaladci
-package examples.shoppingcart2
+package examples.shoppingcart3
+
 import DCI._
 import scala.collection.mutable
 
@@ -88,45 +89,36 @@ class PlaceOrder(Shop: Company, Customer: Person) extends Context {
   private val Cart = Order(Customer)
 
   role(Customer) {
-    def markDesiredProductInShop = Shop.addProductToOrder
-    def reviewOrder = Cart.getItems
-    def removeProductFromCart(productId: Int) = Cart.removeItem(productId: Int)
-    def payOrder = Shop.processOrder
-
-    def availableFunds = Customer.cash
-    def withDrawFunds(amountToPay: Int) { Customer.cash -= amountToPay }
-  }
-
-  role(Shop) {
-    def addProductToOrder(): Option[Product] = {
+    def markDesiredProductInShop: Option[Product] = {
       if (!Warehouse.hasDesiredProduct)
         return None
       val product = Warehouse.reserveDesiredProduct
-      val discountedPrice = Shop.discountPriceOf(product)
+      val discountedPrice = Customer.getMemberPriceOf(product)
       val desiredProduct = product.copy(price = discountedPrice)
       Cart.addItem(DesiredProduct, desiredProduct)
       Some(desiredProduct)
     }
-    def processOrder: Boolean = {
+    def reviewOrder = Cart.getItems
+    def removeProductFromCart(productId: Int) = Cart.removeItem(productId: Int)
+    def payOrder: Boolean = {
       val orderTotal = Cart.total
-      if (orderTotal > Customer.availableFunds)
+      if (orderTotal > Customer.cash)
         return false
 
-      Customer.withDrawFunds(orderTotal)
-      Shop.depositFunds(orderTotal)
+      Customer.cash -= orderTotal
+      Shop.cash += orderTotal
 
-      // just for debugging...
+      // just for debugging
       Customer.owns ++= Cart.items
       true
     }
-    def discountPriceOf(product: Product) = {
+
+    def getMemberPriceOf(product: Product) = {
       val customerIsGoldMember = Shop.goldMembers.contains(Customer)
+      val goldMemberReduction = 0.5
       val discountFactor = if (customerIsGoldMember) goldMemberReduction else 1
       (product.price * discountFactor).toInt
     }
-    def goldMemberReduction = 0.5
-    def customerIsGoldMember = Shop.goldMembers.contains(Customer)
-    def depositFunds(amount: Int) { Shop.cash += amount }
   }
 
   role(Warehouse) {
@@ -169,7 +161,7 @@ object TestPlaceOrder extends App {
     )
   }
   reset()
-  showResult("SHOPPING CART 2")
+  showResult("SHOPPING CART 3")
 
   // Various scenarios
   {
@@ -255,7 +247,7 @@ object TestPlaceOrder extends App {
     // Ok, no new car today
     placeOrder.customerRemovesProductFromCart(BMW)
     println(s"@@ Deviation 3a.1.a: Customer removes unaffordable item from cart\n" +
-      placeOrder.customerRequestsToReviewOrder.mkString("\n") + "\n")
+      placeOrder.customerRequestsToReviewOrder.mkString("\n") )
 
     // Let's get some wax anyway...
     placeOrder.customerMarksDesiredProductInShop(1)
