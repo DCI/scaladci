@@ -1,22 +1,22 @@
 package scaladci
-package examples.shoppingcart4
+package examples.shoppingcart4a
 
 import DCI._
 import scala.collection.mutable
 
 /*
-UC now with primary user actions and secondary system responses - still naming
-system responsibilities with Role names...
+Shopping cart example (version 4a) - removing more roles
 
-Added "DesiredProduct" role.
+Removed the DesiredProduct role. It feels too technically motivated (to avoid passing
+the marked product id around) and not 100% as a justified role of a mental model.
 
-Any explicit/implicit logic now shouldn't leak out of the Context..?
+Absorbed the Warehouse role responsibilities into the Customer role.
 
 See discussion at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
 
 ===========================================================================
-USE CASE 2:	Place Order [user-goal]
+USE CASE:	Place Order [user-goal]
 
 Person browsing around finds product(s) in a web shop that he/she wants to buy.
 
@@ -27,36 +27,34 @@ Trigger........ Customer wants to buy certain product(s)
 
 Main Success Scenario
 ---------------------------------------------------------------------------
-1. Customer marks Desired Product in Shop.
-    - Shop reserves product in Warehouse
-    - Shop adds Item to Cart (can repeat from step 1).
-    - Shop shows updated contents of Cart to Customer
-2. Customer requests to review Order.
-    - Shop presents Cart with Items and prices to Customer.
-3. Customer pays Order.
-    - Shop confirms purchase to Customer.
+1. Customer marks Desired Product in Shop
+    - System confirms product availability
+    - System adds Item to Order (can repeat from step 1)
+    - UI shows updated contents of Cart to Customer
+2. Customer requests to review Order
+    - UI presents Cart with Items and prices to Customer
+3. Customer pays Order
+    - System confirms sufficient funds are available
+    - System initiates transfer of funds
+    - UI confirms purchase to Customer
 
 Deviations
 ---------------------------------------------------------------------------
 1a. Product is out of stock:
-    1. Shop informs Customer that Product is out of stock.
+    1. UI informs Customer that Product is out of stock.
 
 1b. Customer has gold membership:
-    1. Shop adds discounted product to Cart.
+    1. System adds discounted product to Order.
 
 3a. Customer has insufficient funds to pay Order:
-    1. Shop informs Customer of insufficient funds on credit card.
+    1. UI informs Customer of insufficient funds.
         a. Customer removes unaffordable item(s) from Cart:
             1. Go to step 3.
-        b. Customer terminates order:
-            2. Failure.
 ===========================================================================
-
-Todo: how to prevent "wrong" invocation order?
 */
 
 // Data
-case class Product(val name: String, price: Int)
+case class Product(name: String, price: Int)
 case class Person(name: String, var cash: Int) {
   val owns = mutable.Map[Int, Product]()
 }
@@ -68,16 +66,18 @@ case class Order(customer: Person) {
   val items = mutable.Map[Int, Product]()
 }
 
-// Context
+// DCI Context
 class PlaceOrder(Shop: Company, Customer: Person) extends Context {
 
-  // Trigger methods
+  // UC steps
   def customerMarksDesiredProductInShop(productId: Int): Option[Product] =
     Customer.markDesiredProductInShop(productId)
   def customerRequestsToReviewOrder: Seq[(Int, Product)] =
     Customer.reviewOrder
   def customerPaysOrder: Boolean =
     Customer.payOrder
+
+  // Deviation(s)
   def customerRemovesProductFromCart(productId: Int): Option[Product] =
     Customer.removeProductFromCart(productId)
 
@@ -151,7 +151,7 @@ object TestPlaceOrder extends App {
     )
   }
   reset()
-  showResult("SHOPPING CART 4")
+  showResult("SHOPPING CART 4a")
 
   // Various scenarios
   {

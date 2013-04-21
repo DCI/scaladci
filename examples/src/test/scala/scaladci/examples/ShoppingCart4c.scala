@@ -1,58 +1,54 @@
 package scaladci
-package examples.shoppingcart2
-import DCI._
+package examples.shoppingcart4c
+
 import scala.collection.mutable
 
 /*
-Shopping cart example (version 2) - containing implicit logic leaking out
+Shopping cart example (version 4c) - no Roles!!
 
-UC now with primary user actions and secondary system responses - still naming
-system responsibilities with Role names...
+No role methods, no interaction between objects (except with the Cart).
 
-Added "DesiredProduct" role to see if preventing passing around the product id
-of the marked product makes sense.
+No DCI anymore - only procedural algorithms in the Context which could be
+any class now (notice it's not extending Context anymore).
 
-New trigger method names prevent implicit logic leaking out of the Context.
+Could we call it a Service now? If so, the specifications/requirements
+below doesn't tell a story any more.
 
 See discussion at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
 
 ===========================================================================
-USE CASE:	Place Order [user-goal]
+Shopping Cart Service (disclaimer: don't know how to specify a Service...)
 
-Person browsing around finds product(s) in a web shop that he/she wants to buy.
-
-Primary actor.. Web customer ("Customer")
-Scope.......... Web shop ("Shop")
-Preconditions.. Shop presents product(s) to Customer
-Trigger........ Customer wants to buy certain product(s)
-
-Main Success Scenario
+Specifications:
 ---------------------------------------------------------------------------
-1. Customer marks Desired Product in Shop
-    - Shop reserves product in Warehouse
-    - Shop adds Item to Cart (can repeat from step 1)
-    - Shop shows updated contents of Cart to Customer
-2. Customer requests to review Order
-    - Shop presents Cart with Items and prices to Customer
-3. Customer pays Order
-    - System confirms sufficient funds are available
-    - System initiates transfer of funds
-    - System informs warehouse to ship products
-    - Shop confirms purchase to Customer
+Add product to cart:
+  - reserve product in Warehouse
+  - add item to order
+  - show updated contents of cart to customer
 
-Deviations
+Review order:
+  - present cart with current items/prices to customer
+
+Pay order:
+  - confirm sufficient funds are available
+  - initiate transfer of funds
+  - confirm purchase to customer
+
+Remove item from cart:
+  - show updated cart to customer
+
+Requirements
 ---------------------------------------------------------------------------
-1a. Product is out of stock:
-    1. Shop informs Customer that Product is out of stock.
+Product out of stock:
+  - don't add item to cart
+  - inform customer of shortage
 
-1b. Customer has gold membership:
-    1. Shop adds discounted product to Cart.
+Customer has gold membership:
+  - calculate discount on products
 
-3a. Customer has insufficient funds to pay Order:
-    1. Shop informs Customer of insufficient funds on credit card.
-        a. Customer removes unaffordable item(s) from Cart:
-            1. Go to step 3.
+Customer has insufficient funds to pay Order:
+  - inform customer of insufficient funds on credit card
 ===========================================================================
 */
 
@@ -69,87 +65,52 @@ case class Order(customer: Person) {
   val items = mutable.Map[Int, Product]()
 }
 
-// Context
-class PlaceOrder(Shop: Company, Customer: Person) extends Context {
+// No DCI Context any longer - is it a "Service" now??
+class PlaceOrder(Shop: Company, Customer: Person) {
+  // No Role any longer
+  private val cart = Order(Customer)
 
-  // Trigger methods matching the main success scenario steps
+  // Service methods
   def customerMarksDesiredProductInShop(productId: Int): Option[Product] = {
-    DesiredProduct = productId
-    Customer.markDesiredProductInShop
-  }
-  def customerRequestsToReviewOrder: Seq[(Int, Product)] =
-    Customer.reviewOrder
-  def customerPaysOrder: Boolean =
-    Customer.payOrder
+    if (!Shop.stock.isDefinedAt(productId))
+      return None
+    val product = Shop.stock(productId)
 
-  // Deviation 3a.1.a trigger method
-  def customerRemovesProductFromCart(productId: Int): Option[Product] =
-    Customer.removeProductFromCart(productId)
+    // get price with discount if any
+    val customerIsGoldMember = Shop.goldMembers.contains(Customer)
+    val goldMemberReduction = 0.5
+    val discountFactor = if (customerIsGoldMember) goldMemberReduction else 1
+    val discountedPrice = (product.price * discountFactor).toInt
 
-  // Roles
-  private var DesiredProduct: Int = _
-  private val Warehouse = Shop
-  private val Cart = Order(Customer)
-
-  role(Customer) {
-    def markDesiredProductInShop = Shop.addProductToOrder
-    def reviewOrder = Cart.getItems
-    def removeProductFromCart(productId: Int) = Cart.removeItem(productId: Int)
-    def payOrder = Shop.processOrder
-
-    def availableFunds = Customer.cash
-    def withDrawFunds(amountToPay: Int) { Customer.cash -= amountToPay }
+    val desiredProduct = product.copy(price = discountedPrice)
+    cart.items.put(productId, desiredProduct)
+    Some(desiredProduct)
   }
 
-  role(Shop) {
-    def addProductToOrder(): Option[Product] = {
-      if (!Warehouse.hasDesiredProduct)
-        return None
-      val product = Warehouse.reserveDesiredProduct
-      val discountedPrice = Shop.discountPriceOf(product)
-      val desiredProduct = product.copy(price = discountedPrice)
-      Cart.addItem(DesiredProduct, desiredProduct)
-      Some(desiredProduct)
-    }
-    def processOrder: Boolean = {
-      val orderTotal = Cart.total
-      if (orderTotal > Customer.availableFunds)
-        return false
-
-      Customer.withDrawFunds(orderTotal)
-      Shop.depositFunds(orderTotal)
-
-      // just for debugging...
-      Customer.owns ++= Cart.items
-      true
-    }
-    def discountPriceOf(product: Product) = {
-      val customerIsGoldMember = Shop.goldMembers.contains(Customer)
-      val discountFactor = if (customerIsGoldMember) goldMemberReduction else 1
-      (product.price * discountFactor).toInt
-    }
-    def goldMemberReduction = 0.5
-    def customerIsGoldMember = Shop.goldMembers.contains(Customer)
-    def depositFunds(amount: Int) { Shop.cash += amount }
+  def customerRequestsToReviewOrder: Seq[(Int, Product)] = {
+    cart.items.toIndexedSeq.sortBy(_._1)
   }
 
-  role(Warehouse) {
-    def hasDesiredProduct = Shop.stock.isDefinedAt(DesiredProduct)
-    def reserveDesiredProduct = Shop.stock(DesiredProduct) // dummy reservation
+  def customerPaysOrder: Boolean = {
+    val orderTotal = cart.items.map(_._2.price).sum
+    if (orderTotal > Customer.cash)
+      return false
+
+    Customer.cash -= orderTotal
+    Shop.cash += orderTotal
+
+    // just for debugging...
+    Customer.owns ++= cart.items
+    true
   }
 
-  role(Cart) {
-    def addItem(productId: Int, product: Product) {
-      Cart.items.put(productId, product)
-    }
-    def removeItem(productId: Int): Option[Product] = {
-      if (!Cart.items.isDefinedAt(productId))
-        return None
-      Cart.items.remove(productId)
-    }
-    def getItems = Cart.items.toIndexedSeq.sortBy(_._1)
-    def total = Cart.items.map(_._2.price).sum
+  def customerRemovesProductFromCart(productId: Int): Option[Product] = {
+    if (!cart.items.isDefinedAt(productId))
+      return None
+    cart.items.remove(productId)
   }
+
+  // (no role implementations!)
 }
 
 // Environment (Web Controller or the like...)
@@ -173,7 +134,7 @@ object TestPlaceOrder extends App {
     )
   }
   reset()
-  showResult("SHOPPING CART 2")
+  showResult("SHOPPING CART 4c")
 
   // Various scenarios
   {
@@ -259,7 +220,7 @@ object TestPlaceOrder extends App {
     // Ok, no new car today
     placeOrder.customerRemovesProductFromCart(BMW)
     println(s"@@ Deviation 3a.1.a: Customer removes unaffordable item from cart\n" +
-      placeOrder.customerRequestsToReviewOrder.mkString("\n") + "\n")
+      placeOrder.customerRequestsToReviewOrder.mkString("\n"))
 
     // Let's get some wax anyway...
     placeOrder.customerMarksDesiredProductInShop(1)

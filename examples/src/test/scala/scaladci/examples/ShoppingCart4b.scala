@@ -1,18 +1,16 @@
 package scaladci
-package examples.shoppingcart2
+package examples.shoppingcart4b
+
 import DCI._
 import scala.collection.mutable
 
 /*
-Shopping cart example (version 2) - containing implicit logic leaking out
+Shopping cart example (version 4b) - only 1 Customer role!
 
-UC now with primary user actions and secondary system responses - still naming
-system responsibilities with Role names...
+The Cart now has no role methods (would that be what we call a "methodless role"?)
 
-Added "DesiredProduct" role to see if preventing passing around the product id
-of the marked product makes sense.
-
-New trigger method names prevent implicit logic leaking out of the Context.
+Can we talk about any Interactions having only the Customer role left? We are definitely
+drifting away from our mental model...
 
 See discussion at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
@@ -29,28 +27,27 @@ Trigger........ Customer wants to buy certain product(s)
 
 Main Success Scenario
 ---------------------------------------------------------------------------
-1. Customer marks Desired Product in Shop
-    - Shop reserves product in Warehouse
-    - Shop adds Item to Cart (can repeat from step 1)
-    - Shop shows updated contents of Cart to Customer
-2. Customer requests to review Order
-    - Shop presents Cart with Items and prices to Customer
-3. Customer pays Order
+1. Customer selects desired product in shop [can repeat]
+    - System confirms product availability
+    - System adds product to order
+    - UI shows updated contents of cart to Customer
+2. Customer requests to review order
+    - UI shows cart with products/prices to Customer
+3. Customer pays order
     - System confirms sufficient funds are available
     - System initiates transfer of funds
-    - System informs warehouse to ship products
-    - Shop confirms purchase to Customer
+    - UI confirms purchase to Customer
 
 Deviations
 ---------------------------------------------------------------------------
 1a. Product is out of stock:
-    1. Shop informs Customer that Product is out of stock.
+    1. UI informs Customer that product is out of stock.
 
 1b. Customer has gold membership:
-    1. Shop adds discounted product to Cart.
+    1. System adds discounted product to order.
 
-3a. Customer has insufficient funds to pay Order:
-    1. Shop informs Customer of insufficient funds on credit card.
+3a. Customer has insufficient funds to pay order:
+    1. UI informs Customer of insufficient funds.
         a. Customer removes unaffordable item(s) from Cart:
             1. Go to step 3.
 ===========================================================================
@@ -69,86 +66,59 @@ case class Order(customer: Person) {
   val items = mutable.Map[Int, Product]()
 }
 
-// Context
+// DCI Context
 class PlaceOrder(Shop: Company, Customer: Person) extends Context {
-
-  // Trigger methods matching the main success scenario steps
-  def customerMarksDesiredProductInShop(productId: Int): Option[Product] = {
-    DesiredProduct = productId
-    Customer.markDesiredProductInShop
-  }
-  def customerRequestsToReviewOrder: Seq[(Int, Product)] =
-    Customer.reviewOrder
-  def customerPaysOrder: Boolean =
-    Customer.payOrder
-
-  // Deviation 3a.1.a trigger method
-  def customerRemovesProductFromCart(productId: Int): Option[Product] =
-    Customer.removeProductFromCart(productId)
-
-  // Roles
-  private var DesiredProduct: Int = _
-  private val Warehouse = Shop
+  // "Methodless role"?
   private val Cart = Order(Customer)
 
+  // UC steps taken
+  def customerSelectedDesiredProduct(productId: Int): Option[Product] =
+    Customer.selectDesiredProduct(productId)
+  def customerRequestedToReviewOrder: Seq[(Int, Product)] =
+    Customer.reviewOrder
+  def customerRequestedToPayOrder: Boolean =
+    Customer.payOrder
+
+  // Deviation(s)
+  def customerRemovedProductFromCart(productId: Int): Option[Product] =
+    Customer.removeProductFromCart(productId)
+
+  // Only 1 role implementation!
   role(Customer) {
-    def markDesiredProductInShop = Shop.addProductToOrder
-    def reviewOrder = Cart.getItems
-    def removeProductFromCart(productId: Int) = Cart.removeItem(productId: Int)
-    def payOrder = Shop.processOrder
-
-    def availableFunds = Customer.cash
-    def withDrawFunds(amountToPay: Int) { Customer.cash -= amountToPay }
-  }
-
-  role(Shop) {
-    def addProductToOrder(): Option[Product] = {
-      if (!Warehouse.hasDesiredProduct)
+    def selectDesiredProduct(productId: Int): Option[Product] = {
+      if (!Shop.stock.isDefinedAt(productId))
         return None
-      val product = Warehouse.reserveDesiredProduct
-      val discountedPrice = Shop.discountPriceOf(product)
+      val product = Shop.stock(productId)
+      val discountedPrice = Customer.getMemberPriceOf(product)
       val desiredProduct = product.copy(price = discountedPrice)
-      Cart.addItem(DesiredProduct, desiredProduct)
+      Cart.items.put(productId, desiredProduct)
       Some(desiredProduct)
     }
-    def processOrder: Boolean = {
-      val orderTotal = Cart.total
-      if (orderTotal > Customer.availableFunds)
+    def reviewOrder = Cart.items.toIndexedSeq.sortBy(_._1)
+    def removeProductFromCart(productId: Int): Option[Product] = {
+      if (!Cart.items.isDefinedAt(productId))
+        return None
+      Cart.items.remove(productId)
+    }
+    def payOrder: Boolean = {
+      val orderTotal = Cart.items.map(_._2.price).sum
+      if (orderTotal > Customer.cash)
         return false
 
-      Customer.withDrawFunds(orderTotal)
-      Shop.depositFunds(orderTotal)
+      Customer.cash -= orderTotal
+      Shop.cash += orderTotal
 
       // just for debugging...
       Customer.owns ++= Cart.items
       true
     }
-    def discountPriceOf(product: Product) = {
+
+    def getMemberPriceOf(product: Product) = {
       val customerIsGoldMember = Shop.goldMembers.contains(Customer)
+      val goldMemberReduction = 0.5
       val discountFactor = if (customerIsGoldMember) goldMemberReduction else 1
       (product.price * discountFactor).toInt
     }
-    def goldMemberReduction = 0.5
-    def customerIsGoldMember = Shop.goldMembers.contains(Customer)
-    def depositFunds(amount: Int) { Shop.cash += amount }
-  }
-
-  role(Warehouse) {
-    def hasDesiredProduct = Shop.stock.isDefinedAt(DesiredProduct)
-    def reserveDesiredProduct = Shop.stock(DesiredProduct) // dummy reservation
-  }
-
-  role(Cart) {
-    def addItem(productId: Int, product: Product) {
-      Cart.items.put(productId, product)
-    }
-    def removeItem(productId: Int): Option[Product] = {
-      if (!Cart.items.isDefinedAt(productId))
-        return None
-      Cart.items.remove(productId)
-    }
-    def getItems = Cart.items.toIndexedSeq.sortBy(_._1)
-    def total = Cart.items.map(_._2.price).sum
   }
 }
 
@@ -173,20 +143,20 @@ object TestPlaceOrder extends App {
     )
   }
   reset()
-  showResult("SHOPPING CART 2")
+  showResult("SHOPPING CART 4b")
 
   // Various scenarios
   {
     println("\n######## Main success scenario ####################")
     val placeOrder = new PlaceOrder(shop, customer)
     println(s"Step 1: Customer marks Desired Products in Shop")
-    placeOrder.customerMarksDesiredProductInShop(1)
-    placeOrder.customerMarksDesiredProductInShop(2)
+    placeOrder.customerSelectedDesiredProduct(1)
+    placeOrder.customerSelectedDesiredProduct(2)
     println(s"Step 2: Customer requests to review order")
     println(s"Shop presents items in cart: \n" +
-      placeOrder.customerRequestsToReviewOrder.mkString("\n"))
+      placeOrder.customerRequestedToReviewOrder.mkString("\n"))
     println(s"Step 3: Customer pays order")
-    val paymentStatus = placeOrder.customerPaysOrder
+    val paymentStatus = placeOrder.customerRequestedToPayOrder
     println(s"Order completed? $paymentStatus\n")
     showResult("Customer bought wax for 40:")
   }
@@ -196,12 +166,12 @@ object TestPlaceOrder extends App {
     val placeOrder = new PlaceOrder(shop, customer)
     val desiredProduct = 1
     shop.stock.remove(desiredProduct)
-    val itemAdded = placeOrder.customerMarksDesiredProductInShop(desiredProduct)
+    val itemAdded = placeOrder.customerSelectedDesiredProduct(desiredProduct)
     if (itemAdded == None)
       println(s"@@ Deviation 1a: Product $desiredProduct out of stock!\n")
     val otherDesiredProduct = 2
-    placeOrder.customerMarksDesiredProductInShop(otherDesiredProduct)
-    placeOrder.customerPaysOrder
+    placeOrder.customerSelectedDesiredProduct(otherDesiredProduct)
+    placeOrder.customerRequestedToPayOrder
     showResult("Customer bought tires instead for 600:")
   }
   {
@@ -210,9 +180,9 @@ object TestPlaceOrder extends App {
     val placeOrder = new PlaceOrder(shop, customer)
     // Customer is gold member
     shop.goldMembers.add(customer)
-    placeOrder.customerMarksDesiredProductInShop(1)
+    placeOrder.customerSelectedDesiredProduct(1)
     println(s"@@ Deviation 1b: Customer has gold membership\n")
-    placeOrder.customerPaysOrder
+    placeOrder.customerRequestedToPayOrder
     showResult("Customer has paid half price of 20:")
   }
   {
@@ -220,8 +190,8 @@ object TestPlaceOrder extends App {
     println("\n######## Scenario C ###############################")
     val placeOrder = new PlaceOrder(shop, customer)
     val desiredProduct = 3
-    val itemAdded = placeOrder.customerMarksDesiredProductInShop(desiredProduct)
-    val paymentCompleted = placeOrder.customerPaysOrder
+    val itemAdded = placeOrder.customerSelectedDesiredProduct(desiredProduct)
+    val paymentCompleted = placeOrder.customerRequestedToPayOrder
     if (!paymentCompleted)
       println(s"@@ Deviation 3a: Insufficient funds for ${itemAdded.get.name}\n")
     showResult("Order placement aborted:")
@@ -241,15 +211,15 @@ object TestPlaceOrder extends App {
     shop.goldMembers.add(customer)
 
     // Trying to buy tires
-    val itemAdded = placeOrder.customerMarksDesiredProductInShop(tires)
+    val itemAdded = placeOrder.customerSelectedDesiredProduct(tires)
     if (itemAdded == None)
       println(s"@@ Deviation 1a: Product $tires out of stock!")
 
     // Let's buy the BMW instead then - as a gold member that should be possible!
     val BMW = 3
-    val newItemAdded = placeOrder.customerMarksDesiredProductInShop(BMW)
+    val newItemAdded = placeOrder.customerSelectedDesiredProduct(BMW)
     println(s"@@ Deviation 1b: Customer has gold membership")
-    val paymentCompleted = placeOrder.customerPaysOrder
+    val paymentCompleted = placeOrder.customerRequestedToPayOrder
 
     // Ouch - still too expensive
     if (!paymentCompleted)
@@ -257,15 +227,15 @@ object TestPlaceOrder extends App {
         s"${newItemAdded.get.name} (${newItemAdded.get.price} needed)")
 
     // Ok, no new car today
-    placeOrder.customerRemovesProductFromCart(BMW)
+    placeOrder.customerRemovedProductFromCart(BMW)
     println(s"@@ Deviation 3a.1.a: Customer removes unaffordable item from cart\n" +
-      placeOrder.customerRequestsToReviewOrder.mkString("\n") + "\n")
+      placeOrder.customerRequestedToReviewOrder.mkString("\n"))
 
     // Let's get some wax anyway...
-    placeOrder.customerMarksDesiredProductInShop(1)
+    placeOrder.customerSelectedDesiredProduct(1)
 
     // Now we can afford it
-    placeOrder.customerPaysOrder
+    placeOrder.customerRequestedToPayOrder
 
     showResult("Gold customer can't get out-of-stock tires, neither " +
       "too expensive BMW (even with gold discount). Ok, some wax then:")

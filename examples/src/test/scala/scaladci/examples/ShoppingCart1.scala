@@ -4,6 +4,8 @@ import DCI._
 import scala.collection.mutable
 
 /*
+Shopping cart example, version 1
+
 Implementing a simple Place Order use case of an online shopping cart to explore
 how we could handle various execution paths (scenarios) within a single DCI Context.
 
@@ -11,7 +13,7 @@ See discussion at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
 
 ===========================================================================
-USE CASE 1:	Place Order [user-goal]
+USE CASE:	Place Order [user-goal]
 
 Person browsing around finds product(s) in a web shop that he/she wants to buy.
 
@@ -95,7 +97,7 @@ class PlaceOrder(Shop: Company, Customer: Person) extends Context {
   }
 
   role(Shop) {
-    def receivePayment(amount: Int) {Shop.cash += amount}
+    def receivePayment(amount: Int) { Shop.cash += amount }
   }
 
   role(Warehouse) {
