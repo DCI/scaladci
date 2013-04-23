@@ -8,7 +8,7 @@ import scala.collection.mutable
 Shopping cart example (version 5a) - (Non-DCI?) Centralized Mediator model
 
 This version re-introduces more Roles reflecting the participants of a richer mental
-model drawn from both the user and application progammers mental models.
+model drawn from both the user and application programmers mental models.
 
 Each UC step is a User action followed by a series of system actions with the last
 action returning some data or status to the UI.
