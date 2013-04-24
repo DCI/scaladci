@@ -1,19 +1,31 @@
 package scaladci
-package examples.shoppingcart5b
+package examples.shoppingcart5
 
+import DCI._
 import scala.collection.mutable
 
 /*
-Shopping cart example (version 5b) - Non-DCI Centralized Mediator model, without Roles/Context
+Shopping cart example (version 5) - (Non-DCI?) Centralized Mediator model
 
-Roles of version 5a is here replaced with "Role" objects! So they no longer share
-identity with the data objects they "play" (well, there's no role playing here).
+This version re-introduces more Roles reflecting the participants of a richer mental
+model drawn from both the user and application programmers mental models.
 
-As Trygve Reenskaug clearly explains here:
+Each UC step is a User action followed by a series of system actions with the last
+action returning some data or status to the UI.
+
+Each trigger method in the Context is named after the overall description of those
+system response actions rather than the User action/step that initiates them as we
+had in earlier versions.
+
+Each trigger method body contains all the system response actions as a centralized
+algorithm resembling the Mediator pattern. Trygve Reenskaug has a great explanation
+here of how this approach differs from DCI:
 https://groups.google.com/forum/#!msg/object-composition/8Qe00Vt3MPc/4v9Wca3NSHIJ
-the DCI machinery is really not needed with this centralized mental model and this
-is an example of doing that. We organize the procedural sub-routines in "Role" objects so
-a lot of our attention is still going towards "Role"-thinking.
+
+Side note: Changed "marks" to "selects" in UC step 1 since the user might as well
+"click", "drag" "tell" etc - all UI words representing the same intention of selection.
+We have also already defined the Shop as our scope. So we don't need to write where
+the Customer is selecting ("Customer selects desired product _in Shop_").
 
 See discussion at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
@@ -76,13 +88,10 @@ case class Order(customer: Person) {
   val items = mutable.Map[Int, Product]()
 }
 
-// Non-DCI "Context"
-class PlaceOrder(val company: Company, val customer: Person) {
+// DCI Context
+class PlaceOrder(Company: Company, Customer: Person) extends Context {
 
-  // "Context" state
-  private val cart = Order(customer)
-
-  // "Service" methods?
+  // Trigger methods
   def processProductSelection(desiredProductId: Int): Option[Product] = {
     if (!Warehouse.has(desiredProductId))
       return None
@@ -110,45 +119,48 @@ class PlaceOrder(val company: Company, val customer: Person) {
     Cart.removeItem(productId)
   }
 
+  // Roles (in order of "appearance")
+  private val Warehouse = Company
+  private val CustomerDepartment = Company
+  private val PaymentGateway = Company
+  private val CompanyAccount = Company
+  private val Cart = Order(Customer)
 
-  // "Role" objects
-
-  private object Warehouse {
-    def has(productId: Int) = company.stock.isDefinedAt(productId)
-    def get(productId: Int) = company.stock(productId)
+  role(Warehouse) {
+    def has(productId: Int) = Warehouse.stock.isDefinedAt(productId)
+    def get(productId: Int) = Warehouse.stock(productId)
     def shipProducts = {
-      customer.owns ++= Cart.getItems
-      Cart.getItems.foreach(i => company.stock.remove(i._1))
+      Customer.owns ++= Cart.items
+      Cart.items.foreach(i => Warehouse.stock.remove(i._1))
       true // dummy delivery confirmation
     }
   }
 
-  private object CustomerDepartment {
-    def hasGoldMember(member: Person) = company.goldMembers.contains(member)
-    def calculateEligibleDiscountFactor = if (Customer.isGoldMember) 0.5 else 1.0
+  role(CustomerDepartment) {
+    def calculateEligibleDiscountFactor = if (Customer.isGoldMember) 0.5 else 1
   }
 
-  private object Customer {
-    def withdrawFunds(amountToPay: Int) { customer.cash -= amountToPay }
-    def receiveProducts(products: Seq[(Int, Product)]) { customer.owns ++= products }
-    def isGoldMember = CustomerDepartment.hasGoldMember(customer)
+  role(Customer) {
+    def withdrawFunds(amountToPay: Int) { Customer.cash -= amountToPay }
+    def receiveProducts(products: Seq[(Int, Product)]) { Customer.owns ++= products }
+    def isGoldMember = CustomerDepartment.goldMembers.contains(Customer)
   }
 
-  private object Cart {
+  role(Cart) {
     def addItem(productId: Int, product: Product) {
-      cart.items.put(productId, product)
+      Cart.items.put(productId, product)
     }
     def removeItem(productId: Int): Option[Product] = {
-      if (!cart.items.isDefinedAt(productId))
+      if (!Cart.items.isDefinedAt(productId))
         return None
-      cart.items.remove(productId)
+      Cart.items.remove(productId)
     }
-    def getItems = cart.items.toIndexedSeq.sortBy(_._1)
-    def total = cart.items.map(_._2.price).sum
+    def getItems = Cart.items.toIndexedSeq.sortBy(_._1)
+    def total = Cart.items.map(_._2.price).sum
   }
 
-  private object PaymentGateway {
-    def confirmSufficientFunds = customer.cash >= Cart.total
+  role(PaymentGateway) {
+    def confirmSufficientFunds = Customer.cash >= Cart.total
     def initiateOrderPayment = {
       val amount = Cart.total
       Customer.withdrawFunds(amount)
@@ -157,8 +169,8 @@ class PlaceOrder(val company: Company, val customer: Person) {
     }
   }
 
-  private object CompanyAccount {
-    def depositFunds(amount: Int) { company.cash += amount }
+  role(CompanyAccount) {
+    def depositFunds(amount: Int) { self.cash += amount }
   }
 }
 
@@ -183,7 +195,7 @@ object TestPlaceOrder extends App {
     )
   }
   reset()
-  showResult("SHOPPING CART 5b")
+  showResult("SHOPPING CART 5")
 
   // Various scenarios
   {

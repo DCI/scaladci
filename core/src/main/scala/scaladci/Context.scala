@@ -43,31 +43,31 @@ object DCI {
       }.toMap
       def isParamAccessor(flags: FlagSet) = (flags.asInstanceOf[Long] & 1L << 29) != 0
 
+      def isRoleMethod(qualifier: String, methodName: String) =
+        !roleDefMethods.isEmpty && roles.contains(qualifier) && roles(qualifier).contains(methodName)
+
       //      r(body)
     }
 
     // AST transformers ====================================================================
 
-    // Context scope
+    // Transform Context body
     object contextTransformer extends Transformer {
       override def transform(contextTree: Tree): Tree = contextTree match {
-
-        // Transform roles
 
         // role(paramIdentifier) {...}
         case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(TermName(roleName)))), List(Block(roleBody, Literal(Constant(())))))
           if ctx.paramNames.contains(roleName) =>
           val newRoleBody = roleTransformer(roleName).transformTrees(roleBody)
           val newRoleDef = Apply(Apply(Ident(TermName("role")), List(Ident(TermName(roleName)))), List(Block(newRoleBody, Literal(Constant(())))))
-//                    compare(roleDef, newRoleDef)
+          //          compare(roleDef, newRoleDef)
           newRoleDef
-
 
         // role(fieldIdentifier) {...}
         case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(TermName(roleName)))), List(Block(roleBody, Literal(Constant(()))))) =>
           val newRoleBody = roleTransformer(roleName).transformTrees(roleBody)
           val newRoleDef = Apply(Apply(Ident(TermName("role")), List(Ident(TermName(roleName)))), List(Block(newRoleBody, Literal(Constant(())))))
-//                    compare(roleDef, newRoleDef)
+          //                    compare(roleDef, newRoleDef)
           newRoleDef
 
         // role("someString") {...}
@@ -93,7 +93,7 @@ object DCI {
       }
     }
 
-    // Role scope
+    // Transform role body
     case class roleTransformer(roleName: String) extends Transformer {
       override def transform(roleTree: Tree): Tree = roleTree match {
 
@@ -112,8 +112,7 @@ object DCI {
 
           // Build role method AST
           val newRoleMethod = DefDef(Modifiers(PRIVATE), newRoleMethodName, x2, x3, x4, newRoleMethodBody)
-//                    compare(roleMethod, newRoleMethod)
-
+          //          compare(roleMethod, newRoleMethod)
           newRoleMethod
         }
 
@@ -127,7 +126,7 @@ object DCI {
       }
     }
 
-    // Role method scope
+    // Transform role method body
     case class roleMethodTransformer(roleName: String) extends Transformer {
       override def transform(roleMethodTree: Tree): Tree = roleMethodTree match {
 
@@ -143,45 +142,55 @@ object DCI {
           //          compare(roleMethodRef, newRoleMethodRef)
           newRoleMethodRef
 
-        // Disallow `this` in role methods
+        // Disallow `this` in role method body
         case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
-          out(s"`this` in a role method points to the Context and is not allowed. Please access Context members directly if needed.")
+          out(s"`this` in a role method points to the Context and is not allowed in this DCI Context. " +
+            s"\nPlease access Context members directly if needed or use 'self' to reference the Role Player.")
           EmptyTree
+
+        // self.roleMethod(params..) => RoleName_roleMethod(params..)
+        // Role methods take precedence over instance methods!
+        case methodRef@Apply(Select(Ident(TermName("self")), TermName(methodName)), List(params))
+          if ctx.isRoleMethod(roleName, methodName) =>
+          val newMethodRef = Apply(Ident(TermName(roleName + "_" + methodName)), List(params))
+          //          compare(methodRef, newMethodRef)
+          newMethodRef
+
+        // self.instanceMethod(params..) => RoleName.instanceMethod(params..)
+        // self.instanceMethod() => RoleName.instanceMethod()
+        // self.instanceMethod => RoleName.instanceMethod
+        // someMethod(self) => someMethod(RoleName)
+        // possibly other uses...
+        case Ident(TermName("self")) => Ident(TermName(roleName))
 
         // Transform role method tree recursively
         case x => super.transform(roleMethodTree)
       }
     }
 
+    // Transform role method calls
     object roleMethodCalls extends Transformer {
-      def isRoleMethod(qualifier: String, identifier: String) = {
-        !ctx.roleDefMethods.isEmpty &&
-          ctx.roles.contains(qualifier) &&
-          ctx.roles(qualifier).contains(identifier)
-      }
-
       override def transform(contextTree: Tree): Tree = contextTree match {
 
-        // Transform role method calls
-
         // RoleName.roleMethod(params..) => RoleName_roleMethod(params..)
-        case methodRef@Apply(Select(Ident(TermName(qualifier)), TermName(identifier)), List(params))
-          if isRoleMethod(qualifier, identifier) =>
-          val newMethodRef = Apply(Ident(TermName(qualifier + "_" + identifier)), List(params))
+        case methodRef@Apply(Select(Ident(TermName(qualifier)), TermName(methodName)), List(params))
+          if ctx.isRoleMethod(qualifier, methodName) =>
+          val newMethodRef = Apply(Ident(TermName(qualifier + "_" + methodName)), List(params))
           //          compare(methodRef, newMethodRef)
           newMethodRef
 
+
         // RoleName.roleMethod() => RoleName_roleMethod()
-        case methodRef@Apply(Select(Ident(TermName(qualifier)), TermName(identifier)), List())
-          if isRoleMethod(qualifier, identifier) =>
-          val newMethodRef = Apply(Ident(TermName(qualifier + "_" + identifier)), List())
+        case methodRef@Apply(Select(Ident(TermName(qualifier)), TermName(methodName)), List())
+          if ctx.isRoleMethod(qualifier, methodName) =>
+          val newMethodRef = Apply(Ident(TermName(qualifier + "_" + methodName)), List())
           //          compare(methodRef, newMethodRef)
           newMethodRef
 
         // RoleName.roleMethod => RoleName_roleMethod
-        case methodRef@Select(Ident(TermName(qualifier)), TermName(identifier))
-          if isRoleMethod(qualifier, identifier) =>
-          val newMethodRef = Ident(TermName(qualifier + "_" + identifier))
+        case methodRef@Select(Ident(TermName(qualifier)), TermName(methodName))
+          if ctx.isRoleMethod(qualifier, methodName) =>
+          val newMethodRef = Ident(TermName(qualifier + "_" + methodName))
           //          compare(methodRef, newMethodRef)
           newMethodRef
 
@@ -205,10 +214,10 @@ object DCI {
     contextTree = roleMethodCalls.transformTrees(contextTree)
     contextTree = contextTransformer.transformTrees(contextTree)
     contextTree = globalizeRoleMethodsToContext(contextTree)
-//    lr(contextTree)
+    //    lr(contextTree)
 
     // Uncomment any of these to see the developing new AST (optionally place them somewhere between the different phases above).
-//        out(contextTree)
+    //        out(contextTree)
     //    compare(ctx.body, contextTree)
     //    compareRaw(ctx.body, contextTree)
 

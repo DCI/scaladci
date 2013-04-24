@@ -1,26 +1,30 @@
 package scaladci
-package examples.MoneyTransfer1
-import DCI._
+package examples.role_object.moneytransfer1
+
+// DISCLAIMER: Non-DCI compliant role-object approach
+// Simplest possible version of canonical Money Transfer example
 
 case class Account(name: String, var balance: Int) {
   def increaseBalance(amount: Int) { balance += amount }
   def decreaseBalance(amount: Int) { balance -= amount }
 }
 
-class MoneyTransfer(Source: Account, Destination: Account, amount: Int) extends Context {
+// See: https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
+
+class MoneyTransfer(source: Account, destination: Account, amount: Int) {
 
   Source.withdraw
 
-  role(Source) {
+  private object Source {
     def withdraw {
-      Source.decreaseBalance(amount)
+      source.decreaseBalance(amount)
       Destination.deposit
     }
   }
 
-  role(Destination) {
+  private object Destination {
     def deposit {
-      Destination.increaseBalance(amount)
+      destination.increaseBalance(amount)
     }
   }
 }

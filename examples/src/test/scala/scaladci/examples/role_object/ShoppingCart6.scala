@@ -1,15 +1,17 @@
 package scaladci
-package examples.shoppingcart6b
+package examples.role_object.shoppingcart6
 
 import scala.collection.mutable
 
 /*
-Shopping cart example (version 6b) - Non-DCI Distributed model (with "Role" objects)
+DISCLAIMER: Non-DCI compliant role-object approach
+
+Shopping cart example (version 6) - Non-DCI Distributed model (with "Role" objects)
 
 This version has no DCI context and "Roles" are simple objects where separate identity
 from their data "counterparts".
 
-Compare this to version 6b (the DCI distributed version) to see the difference.
+Compare this to the standard version 6 (the DCI distributed version) to see the difference.
 
 See discussion at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
@@ -192,7 +194,7 @@ object TestPlaceOrder extends App {
     )
   }
   reset()
-  showResult("SHOPPING CART 6b")
+  showResult("SHOPPING CART 6 (role-object version)")
 
   // Various scenarios
   {

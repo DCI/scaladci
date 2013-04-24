@@ -1,7 +1,13 @@
 package scaladci
-package examples.moneytransfer2b
+package examples.moneytransfer2
 import scala.language.reflectiveCalls
+import DCI._
 
+/*
+More elaborate version of the canonical Money Transfer example
+Inspired by Rune Funch's implementation at
+http://fulloo.info/Examples/Marvin/MoneyTransfer/
+*/
 case class LedgerEntry(message: String, amount: Int)
 
 case class Account(account: String, initialLedgers: List[LedgerEntry]) {
@@ -16,29 +22,29 @@ case class Account(account: String, initialLedgers: List[LedgerEntry]) {
   def decreaseBalance(amount: Int) { ledgers.addEntry("withdrawing", -amount) }
 }
 
-class MoneyTransfer(source: Account, destination: Account, amount: Int) {
+class MoneyTransfer(Source: Account, Destination: Account, amount: Int) extends Context {
 
   def transfer() {
-    Source.transfer()
+    Source.transfer
   }
 
-  private object Source {
+  role(Source) {
     def withdraw() {
-      source.decreaseBalance(amount)
+      self.decreaseBalance(amount)
     }
     def transfer() {
-      println("Source balance is: " + source.balance)
-      println("Destination balance is: " + destination.balance)
+      println("Source balance is: " + self.balance)
+      println("Destination balance is: " + Destination.balance)
       Destination.deposit()
       withdraw()
-      println("Source balance is now: " + source.balance)
-      println("Destination balance is now: " + destination.balance)
+      println("Source balance is now: " + self.balance)
+      println("Destination balance is now: " + Destination.balance)
     }
   }
 
-  private object Destination {
+  role(Destination) {
     def deposit() {
-      destination.increaseBalance(amount)
+      self.increaseBalance(amount)
     }
   }
 }

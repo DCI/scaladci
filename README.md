@@ -1,12 +1,18 @@
 # Injectionless DCI in Scala
 
-Scala [type macros](http://docs.scala-lang.org/overviews/macros/typemacros.html) allows 
-an already instantiated object to play a Role (call role methods) in a 
-[DCI](http://en.wikipedia.org/wiki/Data,_context_and_interaction) Context in a type safe and 
-injectionless way:
+Scala [type macros](http://docs.scala-lang.org/overviews/macros/typemacros.html) 
+allow us to let Data objects play Roles in a 
+[DCI](http://en.wikipedia.org/wiki/Data,_context_and_interaction) Context by transforming
+the abstract syntax tree (AST) of the Context body at compile time.
 
+After transformation, methods of a Role become available to the Data object which 
+now becomes a Role Player in DCI terms. 
 
+We can reference the Role Player with the "self" keyword inside Role methods thus giving 
+access to both instance methods (of the original Data object) and other methods of the Role 
+it plays. Role methods will take precedence over instance methods when they have the same signature.
 
+We can define Roles and their methods like this:
 ```scala
 class MyContext(SomeRole: MyData) extends Context {
   val OtherRole = new OtherData()
@@ -15,7 +21,7 @@ class MyContext(SomeRole: MyData) extends Context {
   
   role(SomeRole) {
     def foo() {
-      SomeRole.doMyDataStuff() 
+      self.doMyDataStuff() // or SomeRole.doMyDataStuff()
       OtherRole.bar()
     }
   }
@@ -27,7 +33,7 @@ class MyContext(SomeRole: MyData) extends Context {
   }
 }
 ```
-After AST transformation, the role methods are prefixed with the role names
+After AST transformation, the Role methods are prefixed with the Role names
 and lifted into the Context namespace:
 
 ```scala
@@ -46,7 +52,7 @@ class MyContext(SomeRole: MyData) extends Context {
   }
 }
 ```
-Comments in the code base explains in more detail how it works.
+Comments in the code base explains in more detail how the transformation works.
 
 Solution inspired by Risto Välimäki's 
 [post](https://groups.google.com/d/msg/object-composition/ulYGsCaJ0Mg/rF9wt1TV_MIJ)
@@ -56,7 +62,8 @@ DCI language by Rune Funch.
 
 Have fun!
 
-Marc Grue (2013-01-20)
+Marc Grue<br>
+April 2013
 
 
 ## Try it out
@@ -77,11 +84,8 @@ then build again:
 
 ####Disclaimer
 
-- Type macros is still an experimental feature of Scala and is under heavy 
-development (as of January 2013).
-- Current method resolution during AST transformation is very simple for now and 
-will need to be analyzed and refined according to DCI constraints. 
-- _ This is NOT production ready code yet. _
+- Type macros are still an experimental feature of Scala
+- This type macro might not cover all uses - please send a note if this is the case!
 
 
 #### Resources

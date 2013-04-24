@@ -1,11 +1,11 @@
 package scaladci
-package examples.shoppingcart6a
+package examples.shoppingcart6
 
 import DCI._
 import scala.collection.mutable
 
 /*
-Shopping cart example (version 6a) - Distributed DCI model
+Shopping cart example (version 6) - Distributed DCI model
 
 This version tries out a distributed model where each Role method calls another
 Role method until a part of the UC is accomplished. Trygve ReenSkaug describes this
@@ -159,9 +159,9 @@ class PlaceOrder(Company: Company, Customer: Person) extends Context {
       if (Customer.cash < Cart.total) return false
 
       // Step 3.2
-      PaymentGateway.initiateOrderPayment
+      initiateOrderPayment
     }
-    def initiateOrderPayment = {
+    def initiateOrderPayment: Boolean = {
       val amount = Cart.total
       Customer.withdrawFunds(amount)
       CompanyAccount.depositFunds(amount)
@@ -172,7 +172,7 @@ class PlaceOrder(Company: Company, Customer: Person) extends Context {
   }
 
   role(CompanyAccount) {
-    def depositFunds(amount: Int) { Company.cash += amount }
+    def depositFunds(amount: Int) { self.cash += amount }
   }
 }
 
@@ -197,7 +197,7 @@ object TestPlaceOrder extends App {
     )
   }
   reset()
-  showResult("SHOPPING CART 6a")
+  showResult("SHOPPING CART 6")
 
   // Various scenarios
   {
