@@ -1,13 +1,18 @@
-package scaladci
-package examples.dijksta_self
+package scaladci.examples
 
 import collection.mutable
 import scaladci.DCI._
 
-// DCI implementation of the Dijkstra algorithm
-// Here using "self" as a reference to the RolePlayer.
+/*
+DCI implementation of the Dijkstra algorithm
+Here using "this" as a reference to the RolePlayer.
 
-object Dijkstra_self extends App {
+ATTENTION: Our use of "this" here is not Scala-idiomatic since "this" would normally
+point to the Dijkstra Context instance. Our Context transformer macro instead turns "this"
+into a DCI-idiomatic reference to the Role Player. Inside each role definition body we can
+maintain the impression of working with "this role".
+*/
+object Dijkstra_this extends App {
 
   // DCI Context
   class Dijkstra(
@@ -37,19 +42,19 @@ object Dijkstra_self extends App {
     // Roles
     role(TentativeDistances) {
       def initialize {
-        self.put(CurrentIntersection, 0)
-        City.intersections.filter(_ != CurrentIntersection).foreach(self.put(_, Int.MaxValue / 4))
+        this.put(CurrentIntersection, 0)
+        City.intersections.filter(_ != CurrentIntersection).foreach(this.put(_, Int.MaxValue / 4))
       }
     }
     role(Detours) {
-      def initialize { self ++= City.intersections }
-      def withSmallestTentativeDistance = { self.reduce((x, y) => if (TentativeDistances(x) < TentativeDistances(y)) x else y) }
+      def initialize { this ++= City.intersections }
+      def withSmallestTentativeDistance = { this.reduce((x, y) => if (TentativeDistances(x) < TentativeDistances(y)) x else y) }
     }
     role(CurrentIntersection) {
       def calculateTentativeDistanceOfNeighbors {
         City.eastNeighbor.foreach(updateNeighborDistance(_))
         City.southNeighbor.foreach(updateNeighborDistance(_))
-        Detours.remove(self)
+        Detours.remove(this)
       }
       def updateNeighborDistance(neighborIntersection: Intersection) {
         if (Detours.contains(neighborIntersection)) {
@@ -57,7 +62,7 @@ object Dijkstra_self extends App {
           val currentTentDistToNeighbor = TentativeDistances(neighborIntersection)
           if (newTentDistanceToNeighbor < currentTentDistToNeighbor) {
             TentativeDistances.update(neighborIntersection, newTentDistanceToNeighbor)
-            shortcuts.put(neighborIntersection, self)
+            shortcuts.put(neighborIntersection, this)
           }
         }
       }
@@ -65,9 +70,9 @@ object Dijkstra_self extends App {
       def lengthOfBlockTo(neighbor: Intersection) = City.distanceBetween(CurrentIntersection, neighbor)
     }
     role(City) {
-      def distanceBetween(from: Intersection, to: Intersection) = self.blockLengths(Block(from, to))
-      def eastNeighbor = self.nextDownTheStreet.get(CurrentIntersection)
-      def southNeighbor = self.nextAlongTheAvenue.get(CurrentIntersection)
+      def distanceBetween(from: Intersection, to: Intersection) = this.blockLengths(Block(from, to))
+      def eastNeighbor = this.nextDownTheStreet.get(CurrentIntersection)
+      def southNeighbor = this.nextAlongTheAvenue.get(CurrentIntersection)
     }
   }
 
@@ -96,6 +101,6 @@ object Dijkstra_self extends App {
   val startingPoint = ManhattanGrid().a
   val destination   = ManhattanGrid().i
   val shortestPath  = new Dijkstra(ManhattanGrid(), startingPoint, destination).shortestPath
-  println("Dijkstra (using 'self' reference):\n" + shortestPath.map(_.name).mkString(" -> "))
+  println("Dijkstra (using 'this' reference):\n" + shortestPath.map(_.name).mkString(" -> "))
   // a -> d -> g -> h -> i
 }

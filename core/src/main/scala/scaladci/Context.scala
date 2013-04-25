@@ -1,6 +1,9 @@
 package scaladci
 import language.dynamics
 import reflect.macros.{Context => MacroContext}
+//import scala.reflect.api.Trees.SelectExtractor
+//import scala.reflect.api.Trees.IdentExtractor
+//import scala.reflect.api.Names.TermNameExtractor
 
 object DCI {
 
@@ -142,18 +145,33 @@ object DCI {
           //          compare(roleMethodRef, newRoleMethodRef)
           newRoleMethodRef
 
-        // Disallow `this` in role method body
-        case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
-          out(s"`this` in a role method points to the Context and is not allowed in this DCI Context. " +
-            s"\nPlease access Context members directly if needed or use 'self' to reference the Role Player.")
-          EmptyTree
+        //        Disallow `this` in role method body
+        //        case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
+        //          out(s"`this` in a role method points to the Context and is not allowed in this DCI Context. " +
+        //            s"\nPlease access Context members directly if needed or use 'self' to reference the Role Player.")
+        //          EmptyTree
+
+        // Allow `this` in role method body
+        case thisRoleMethodRef@Apply(Select(This(tpnme.EMPTY), TermName(methodName)), List(params))
+          if ctx.isRoleMethod(roleName, methodName) =>
+          val newMethodRef = Apply(Ident(TermName(roleName + "_" + methodName)), List(params))
+          //          compare(thisRoleMethodRef, newMethodRef)
+          newMethodRef
+
+        // this.instanceMethod(params..) => RoleName.instanceMethod(params..)
+        // this.instanceMethod() => RoleName.instanceMethod()
+        // this.instanceMethod => RoleName.instanceMethod
+        // someMethod(this) => someMethod(RoleName)
+        // possibly other uses...
+        case This(tpnme.EMPTY) => Ident(TermName(roleName))
+
 
         // self.roleMethod(params..) => RoleName_roleMethod(params..)
         // Role methods take precedence over instance methods!
-        case methodRef@Apply(Select(Ident(TermName("self")), TermName(methodName)), List(params))
+        case selfMethodRef@Apply(Select(Ident(TermName("self")), TermName(methodName)), List(params))
           if ctx.isRoleMethod(roleName, methodName) =>
           val newMethodRef = Apply(Ident(TermName(roleName + "_" + methodName)), List(params))
-          //          compare(methodRef, newMethodRef)
+          //          compare(selfMethodRef, newMethodRef)
           newMethodRef
 
         // self.instanceMethod(params..) => RoleName.instanceMethod(params..)
