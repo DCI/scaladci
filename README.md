@@ -183,7 +183,7 @@ sbt directory that Intellij uses to compile. You can try to empty the following 
 then build again:
 
 - ~/.ivy2/cache/org.scala-lang.macro-paradise/
-- ~/.sbt/0.12.2-RC1/boot/org.scala-lang.macro-paradise.scala-2.11.0-SNAPSHOT/
+- ~/.sbt/0.12.3/boot/org.scala-lang.macro-paradise.scala-2.11.0-SNAPSHOT/
 
 Solution inspired by Risto Välimäki's 
 [post](https://groups.google.com/d/msg/object-composition/ulYGsCaJ0Mg/rF9wt1TV_MIJ)
