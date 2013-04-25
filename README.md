@@ -145,7 +145,7 @@ class MyContext(SomeRole: MyData) extends Context {
   
   role(SomeRole) {
     def foo() {
-      SomeRole.doMyDataStuff() // or SomeRole.doMyDataStuff()
+      SomeRole.doMyDataStuff()
       OtherRole.bar()
     }
   }
