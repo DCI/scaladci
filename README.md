@@ -130,7 +130,7 @@ We have allowed this special DCI-idiomatic meaning of "this" since we want to be
     }
   }
 ```
-"self" and "this" doesn't change how Role methods take precedence over instance methods.
+Using "self" or "this" doesn't change how Role methods take precedence over instance methods.
 
 
 ## Multiple roles
