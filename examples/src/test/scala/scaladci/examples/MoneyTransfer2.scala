@@ -1,7 +1,7 @@
 package scaladci
 package examples.moneytransfer2
 import scala.language.reflectiveCalls
-import DCI._
+import dci._
 
 /*
 More elaborate version of the canonical Money Transfer example
@@ -22,7 +22,8 @@ case class Account(account: String, initialLedgers: List[LedgerEntry]) {
   def decreaseBalance(amount: Int) { ledgers.addEntry("withdrawing", -amount) }
 }
 
-class MoneyTransfer(Source: Account, Destination: Account, amount: Int) extends Context {
+@context
+class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
 
   def transfer() {
     Source.transfer

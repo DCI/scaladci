@@ -1,5 +1,6 @@
-package scaladci.examples.dijkstra
-import scaladci.DCI._
+package scaladci
+package examples.dijkstra
+import dci._
 import collection.mutable
 /*
 Some background info about how the type macro transformation of the Abstract Syntax Tree (AST) enables us to
@@ -82,11 +83,12 @@ object Step1_TentDist extends App {
 
   // Context ##################################################################
 
+  @context
   class CalculateShortestPath(
     City: ManhattanGrid,
     CurrentIntersection: Intersection,
     Destination: Intersection
-  ) extends Context {
+  ) {
 
     // Initialization of a data-holding role player in the Context
     private val TentativeDistances = mutable.HashMap[Intersection, Int]()

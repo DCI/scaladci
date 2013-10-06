@@ -1,7 +1,8 @@
-package scaladci.examples.dijkstra
+package scaladci
+package examples.dijkstra
 
 import collection.mutable
-import scaladci.DCI._
+import dci._
 
 /*
 Now comes the recursive part since we want to calculate tentative distances to neighbor Intersections until we
@@ -27,12 +28,13 @@ From the Manhattan street model algorithm:
 
   6.	Select the intersection in DETOURS with the smallest TENTATIVE DISTANCE, and set it as the new
       CURRENT INTERSECTION then go back to step 3.
- */
+*/
 
 object Step5_6_Recurse extends App {
 
   // Context ##################################################################
 
+  @context
   class Dijkstra(
     City: ManhattanGrid,
     CurrentIntersection: Intersection,
@@ -40,7 +42,7 @@ object Step5_6_Recurse extends App {
     TentativeDistances: mutable.HashMap[Intersection, Int] = mutable.HashMap[Intersection, Int](),
     Detours: mutable.Set[Intersection] = mutable.Set[Intersection](),
     shortcuts: mutable.HashMap[Intersection, Intersection] = mutable.HashMap[Intersection, Intersection]()
-  ) extends Context {
+  ) {
 
     // Since we recurse now, we only want those to be initialized the first time
     if (TentativeDistances.isEmpty) {

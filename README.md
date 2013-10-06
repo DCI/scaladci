@@ -1,28 +1,36 @@
-# DCI with Scala
+# DCI with Scala macro annotation
 
-Scala [type macros](http://docs.scala-lang.org/overviews/macros/typemacros.html) 
-allow us to let Data objects play Roles in a 
-[DCI](http://en.wikipedia.org/wiki/Data,_context_and_interaction) Context by transforming
-the abstract syntax tree (AST) of the Context body at compile time.
+_Using Scala 2.10.3 with macro-paradise plugin._
 
-Let's take a simple Data class Account with some basic instance methods:
+The [Data, Context and Interaction (DCI)](http://en.wikipedia.org/wiki/Data,_context_and_interaction) 
+paradigm by Trygve Reenskaug and James Coplien embodies true object-orientation where
+runtime Interactions between a network of objects in a particular Context 
+is understood _and_ coded as first class citizens.
+
+Let's take a simple Data class Account with some basic methods:
 ```scala
 case class Account(name: String, var balance: Int) {
   def increaseBalance(amount: Int) { balance += amount }
   def decreaseBalance(amount: Int) { balance -= amount }
 }
 ```
-We can then code a Money Transfer use case by giving some incoming Account objects names 
-that correspond to our mental model of our use case. In this case we imagine a Source and a Destination 
-account, and thus give the incoming variables in the MoneyTransfer Context those names. 
+This is what we in DCI call a "dumb" data class. It only "knows" about its own data and how
+to manipulate that. The concept of a transfer between two accounts is outside of its
+responsibilities and we delegate this to a Context - the MoneyTransfer context class. 
+In this way we can keep the Account class very slim and avoid that it gradually takes on
+more and more responsibilities for each use case it participates in.
 
-We add behavior to our Data objects by defining some Role methods:
+In a Money Transfer use case we can imagine a "Source" account where we take the money from
+and a "Destination" account where we put the money. That could be our intuitive "Mental model" 
+of the transfer process. We code the Source and Destination concepts as Roles in the
+Context:
 ```Scala
-class MoneyTransfer(Source: Account, Destination: Account, amount: Int) extends Context {
+@context
+class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
 
-  Source.withdraw // Use case enactment
+  Source.withdraw // Interactions start...
 
-  role(Source) {
+  role(Source) {  // role method here is simply a placeholder for a Role implementation
     def withdraw {
       Source.decreaseBalance(amount)  
       Destination.deposit
@@ -36,10 +44,12 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) extends 
   }
 }
 ```
-After AST transformation by the type macro, Role methods are prefixed with their corresponding Role names
-and lifted into the Context namespace:
+Our @context macro annotation transforms the abstract syntaxt tree (AST) of the context 
+class at compile time by prefixing role methods with role names and lifting those
+methods into the context namespace. This is what we get after compilation has transformed our 
+MoneyTransfer context:
 ```Scala
-class MoneyTransfer(Source: Account, Destination: Account, amount: Int) extends Context {
+class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
   
   Source_withdraw()
   
@@ -53,10 +63,9 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) extends 
   }
 }
 ```
-As you see there is no injection of methods into the objects.
 
 ## "Overriding" instance methods
-We can "override" Data instance methods with Role methods:
+In some cases we want to override the instance methods of a domain object with a Role method:
 ```Scala
   role(Source) {
     def withdraw {
@@ -64,7 +73,7 @@ We can "override" Data instance methods with Role methods:
       Destination.deposit
     }
     
-    // Role method with same signature as Data instance method
+    // Role method with same signature as instance method
     def decreaseBalance(amount: Int) { 
       Source.balance -= amount * 3
     }
@@ -134,10 +143,11 @@ Using "self" or "this" doesn't change how Role methods take precedence over inst
 
 
 ## Multiple roles
-We can "assign" or "bind" a data object to several Roles in our Context by simply making
+We can "assign" or "bind" a domain object to several Roles in our Context by simply making
 more variables with Role names pointing to that object:
 ```Scala
-class MyContext(SomeRole: MyData) extends Context {
+@context
+class MyContext(SomeRole: MyData) {
   val OtherRole = SomeRole
   val LocalRole = new DummyData()
   
@@ -163,7 +173,7 @@ class MyContext(SomeRole: MyData) extends Context {
   }
 }
 ```
-As you see, OtherRole is simply a reference pointing to the MyData instance (named SomeRole). 
+As you see in line 3, OtherRole is simply a reference pointing to the MyData instance (named SomeRole). 
 
 Inside each role definition we can still use "self" and "this".
 
@@ -178,12 +188,6 @@ cd scaladci
 ./sbt
 gen-idea
 ```
-If the project won't build, it can be because you have another Scala snapshot version in your central
-sbt directory that Intellij uses to compile. You can try to empty the following directories and
-then build again:
-
-- ~/.ivy2/cache/org.scala-lang.macro-paradise/
-- ~/.sbt/0.12.3/boot/org.scala-lang.macro-paradise.scala-2.11.0-SNAPSHOT/
 
 Solution inspired by Risto Välimäki's 
 [post](https://groups.google.com/d/msg/object-composition/ulYGsCaJ0Mg/rF9wt1TV_MIJ)
@@ -194,21 +198,15 @@ DCI language by Rune Funch.
 Have fun!
 
 Marc Grue<br>
-April 2013
+October 2013
 
-
-####Disclaimer
-
-- Type macros are still an experimental feature of Scala
-- This type macro might not cover all uses - please send a note if this is the case!
 
 
 #### Resources
-DCI: 
+DCI:
 [Object-composition](https://groups.google.com/forum/?fromgroups#!forum/object-composition),
 [Full-OO](http://fulloo.info),
 [DCI wiki](http://en.wikipedia.org/wiki/Data,_Context,_and_Interaction)<br>
-Scala type macros:
-[Type macros](http://docs.scala-lang.org/overviews/macros/typemacros.html), 
-[Scala macros](http://scalamacros.org),
-[ScalaMock](https://github.com/paulbutcher/ScalaMock)
+Scala:
+[Macro annotations](http://docs.scala-lang.org/overviews/macros/annotations.html), 
+[Macro paradise](http://docs.scala-lang.org/overviews/macros/paradise.html)

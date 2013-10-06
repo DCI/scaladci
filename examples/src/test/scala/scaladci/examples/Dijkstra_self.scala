@@ -2,14 +2,14 @@ package scaladci
 package examples.dijksta_self
 
 import collection.mutable
-import scaladci.DCI._
+import dci._
 
 // DCI implementation of the Dijkstra algorithm
 // Here using "self" as a reference to the RolePlayer.
 
 object Dijkstra_self extends App {
 
-  // DCI Context
+  @context
   class Dijkstra(
     City: ManhattanGrid,
     CurrentIntersection: Intersection,
@@ -17,7 +17,7 @@ object Dijkstra_self extends App {
     TentativeDistances: mutable.HashMap[Intersection, Int] = mutable.HashMap[Intersection, Int](),
     Detours: mutable.Set[Intersection] = mutable.Set[Intersection](),
     shortcuts: mutable.HashMap[Intersection, Intersection] = mutable.HashMap[Intersection, Intersection]()
-    ) extends Context {
+    ) {
 
     // Algorithm
     if (TentativeDistances.isEmpty) {

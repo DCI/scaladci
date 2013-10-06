@@ -1,6 +1,7 @@
-package scaladci.examples.dijkstra
+package scaladci
+package examples.dijkstra
 import collection.mutable
-import scaladci.DCI._
+import dci._
 /*
 Now comes the meaty part of calculating the tentative distances:
 
@@ -19,11 +20,12 @@ object Step3_4_Calculate extends App {
 
   // Context ##################################################################
 
+  @context
   class CalculateShortestPath(
     City: ManhattanGrid,
     CurrentIntersection: Intersection,
     Destination: Intersection
-  ) extends Context {
+  ) {
 
     private val TentativeDistances = mutable.HashMap[Intersection, Int]()
     private val Detours            = mutable.Set[Intersection]()

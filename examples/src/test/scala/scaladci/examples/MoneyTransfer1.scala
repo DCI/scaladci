@@ -1,6 +1,6 @@
 package scaladci
 package examples.moneytransfer1
-import DCI._
+import dci._
 
 /*
 Simplest versions of the canonical Money Transfer example
@@ -15,7 +15,9 @@ case class Account(name: String, var balance: Int) {
 }
 
 // Using Role name as reference to the Role Player
-class MoneyTransfer(Source: Account, Destination: Account, amount: Int) extends Context {
+
+@context
+class MoneyTransfer(val Source: Account, Destination: Account, amount: Int) {
 
   Source.withdraw
 
@@ -34,7 +36,9 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) extends 
 }
 
 // Using "self" as reference to the Role Player
-class MoneyTransfer_self(Source: Account, Destination: Account, amount: Int) extends Context {
+
+@context
+class MoneyTransfer_self(Source: Account, Destination: Account, amount: Int) {
 
   Source.withdraw
 
@@ -63,7 +67,8 @@ point to the MoneyTransfer_this Context instance. Our Context transformer macro 
 "this" into a DCI-idiomatic reference to the Role Player. Inside each role definition body we
 can maintain the impression of working with "this role".
 */
-class MoneyTransfer_this(Source: Account, Destination: Account, amount: Int) extends Context {
+@context
+class MoneyTransfer_this(Source: Account, Destination: Account, amount: Int) {
 
   Source.withdraw
 

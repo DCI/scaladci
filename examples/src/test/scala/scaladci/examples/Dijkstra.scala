@@ -2,13 +2,13 @@ package scaladci
 package examples.dijkstra
 
 import collection.mutable
-import scaladci.DCI._
+import dci._
 
 // DCI implementation of the Dijkstra algorithm
 
 object Dijkstra extends App {
 
-  // DCI Context
+  @context
   class Dijkstra(
     City: ManhattanGrid,
     CurrentIntersection: Intersection,
@@ -16,7 +16,7 @@ object Dijkstra extends App {
     TentativeDistances: mutable.HashMap[Intersection, Int] = mutable.HashMap[Intersection, Int](),
     Detours: mutable.Set[Intersection] = mutable.Set[Intersection](),
     shortcuts: mutable.HashMap[Intersection, Intersection] = mutable.HashMap[Intersection, Intersection]()
-    ) extends Context {
+    ) {
 
     // Algorithm
     if (TentativeDistances.isEmpty) {

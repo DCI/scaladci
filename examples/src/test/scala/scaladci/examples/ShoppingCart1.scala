@@ -1,6 +1,6 @@
 package scaladci
 package examples.shoppingcart1
-import DCI._
+import dci._
 import scala.collection.mutable
 
 /*
@@ -65,8 +65,8 @@ case class Order(customer: Person) {
   val items = mutable.Map[Int, Product]()
 }
 
-// Context
-class PlaceOrder(Shop: Company, Customer: Person) extends Context {
+@context
+class PlaceOrder(Shop: Company, Customer: Person) {
 
   // Trigger methods
   def addItem(productId: Int): Option[Product] = Cart.addItem(productId)
