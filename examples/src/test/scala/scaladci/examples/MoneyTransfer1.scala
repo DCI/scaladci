@@ -85,7 +85,7 @@ class MoneyTransfer_this(Source: Account, Destination: Account, amount: Int) {
       this.increaseBalance(amount)
     }
     // Overriding an instance method - this role method takes precedence
-    def increaseBalance(amount: Int) { self.balance += amount * 2 }
+    def increaseBalance(amount: Int) { this.balance += amount * 2 }
   }
 }
 

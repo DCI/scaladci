@@ -2,16 +2,15 @@ import sbt._
 import sbt.Keys._
 
 object ScalaDCIBuild extends Build {
-  val buildVersion           = "0.3.1"
-  val buildScalaVersion      = "2.10.3"
-      val buildScalaOrganization = "org.scala-lang"
-    // val buildScalaOrganization = "org.scala-lang.macroparadise"
+  val buildVersion = "0.3.1"
+  val buildScalaVersion = "2.10.3"
+  val buildScalaOrganization = "org.scala-lang"
 
   val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.github.dci",
     version := buildVersion,
     scalaVersion := buildScalaVersion,
-      scalaOrganization := buildScalaOrganization,
+    scalaOrganization := buildScalaOrganization,
     scalacOptions := Seq("-unchecked", "-deprecation", "-feature", "-language:implicitConversions"), //, "-language:experimental.macros"),
     libraryDependencies ++= Seq("org.scalatest" % "scalatest_2.10" % "2.0.M5b"),
     resolvers += Resolver.sonatypeRepo("releases"),
@@ -23,8 +22,8 @@ object ScalaDCIBuild extends Build {
     "scaladci",
     file("."),
     settings = buildSettings ++ Seq(
-          run <<= run in Compile in scaladciExamples
-        )
+      run <<= run in Compile in scaladciExamples
+    )
   ) aggregate(scaladciCore, scaladciExamples)
 
   lazy val scaladciCore = Project(
@@ -32,9 +31,7 @@ object ScalaDCIBuild extends Build {
     file("core"),
     settings = buildSettings ++ Seq(
       name := "ScalaDCI Core",
-//      libraryDependencies += buildScalaOrganization % "scala-reflect" % buildScalaVersion
       libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _)
-//      libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _)
     )
   )
 
@@ -42,6 +39,11 @@ object ScalaDCIBuild extends Build {
     "scaladci-examples",
     file("examples"),
     settings = buildSettings ++ Seq(
-      name := "ScalaDCI Examples")
-  ) dependsOn (scaladciCore)
+      name := "ScalaDCI Examples",
+      libraryDependencies ++= Seq(
+        "org.jscala" %% "jscala-macros" % "0.3",
+        "org.jscala" %% "jscala-annots" % "0.3"
+      )
+    )
+  ) dependsOn scaladciCore
 }
