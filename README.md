@@ -1,6 +1,11 @@
-# Pure DCI in Scala (version 0.4)
+# DCI in Scala
 
-_Using Scala 2.10.3 with macro-paradise plugin._
+**A Scala macro annotation that allow us to assign objects to defined Roles 
+in a Context according to DCI.**
+
+- Version 0.4.0
+- Scala 2.10.3 (can easily be adapted to 2.11)
+- Using macro-paradise plugin
 
 The [Data, Context and Interaction (DCI)](http://en.wikipedia.org/wiki/Data,_context_and_interaction) 
 paradigm by Trygve Reenskaug and James Coplien embodies true object-orientation where
@@ -180,6 +185,89 @@ Inside each role definition we can still use `self` and `this`.
 We can add as many references/role definitions as we want. This is a way to 
 allow different Roles of a Use Case each to have their own meaningful namespace for defining their 
 role-specific behavior / role methods.
+
+## How does it work?
+In order to have an intuitive syntax like
+
+```scala
+role RoleName { 
+  // defining role methods...
+}
+```
+
+for defining a Role and its Role methods we need to make a Scala
+contruct that is valid before our macro annotation can start transforming our code. 
+Maybe there's a way to achieve the above syntax with implicits but Dynamic does the job:
+
+```scala
+object role extends Dynamic {
+  def applyDynamic(obj: Any)(roleBody: => Unit) = roleBody
+}
+```
+
+Since the `role` object extends the `Dynamic` marker trait and we have defined an
+ `applyDynamic` method, we can invoke methods with arbitrary method names on the
+ `role` object. When the compiler find that we are trying to call a method on
+  `role` that we haven't defined (it doesn't type check), it will rewrite our code 
+  so that it calls `applyDynamic`:
+ 
+```scala
+role.foo(args) ~~> role.applyDynamic("foo")(args)
+role.bar(args) ~~> role.applyDynamic("bar")(args)
+```
+
+For the purpose of DCI we can presume to call a method on `role` that "happens"
+to have a Role name:
+
+```scala
+role.Source(args)      ~~> role.applyDynamic("Source")(args)
+role.Destination(args) ~~> role.applyDynamic("Destination")(args)
+```
+
+Scala allow us to replace the `.` with a space and the parentheses with curly
+braces:
+
+```scala
+role Source {args}      ~~> role.applyDynamic("Source")(args)
+role Destination {args} ~~> role.applyDynamic("Destination")(args)
+```
+
+You see where we're getting at. Now, the `args` signature in our
+`applyDynamic` method has a "by-name" parameter type of `=> Unit` that
+ allow us to define a block of code that returns nothing:
+ 
+```scala
+role Source {
+  doThis
+  doThat
+}      
+~~> role.applyDynamic("Source")(doThis; doThat) // pseudo code
+```
+
+The observant reader will note that "Source" given the Dynamic invocation 
+capability is merely a "free text" name that has no connection to the object 
+that we have called "Source":
+
+```scala
+val Source = new Account(...) // `Source` is an object identifier
+role Source {...}             // "Source" is a method name
+```
+
+In order to enforce that the method name "Source" points to the object `Source` 
+our `@context` macro annotation checks that the method name has a corresponding 
+identifier in the scope of the annotated Context. If it doesn't it won't compile 
+and the programmer will be noticed of available identifier names (one could have 
+misspelled the Role name for instance).
+
+If one prefers, the old "method syntax" can still be used:
+
+```scala
+role(Source) {...} // `Source` is an object identifier
+```
+This has the advantage of being inferred by the IDE but at the same time being
+less DCI ideomatic since it looks less like a role definition than a method call 
+which is not the intention and result after source code transformation.
+
 
 ## Try it
 ```
