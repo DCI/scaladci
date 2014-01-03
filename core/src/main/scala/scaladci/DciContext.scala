@@ -282,7 +282,7 @@ object DciContext {
     contextTree = roleMethodCalls.transformTrees(contextTree)
     contextTree = contextTransformer.transformTrees(contextTree)
     contextTree = globalizeRoleMethodsToContext(contextTree)
-    //    comp(ctx.body, contextTree)
+//        comp(ctx.body, contextTree)
 
     // Return transformed context
     c.Expr[Any](ClassDef(mods, className, typeDefs, Template(Nil, emptyValDef, contextTree)))

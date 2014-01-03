@@ -132,6 +132,7 @@ class MoneyTransfer1 extends Specification {
     Source.withdraw
 
     role(Source) {
+      def decreaseBalance(amount: Int) = 7
       def withdraw {
         Source.decreaseBalance(amount)
         Destination.deposit
