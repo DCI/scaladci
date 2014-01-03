@@ -1,7 +1,8 @@
 package scaladci
-package examples.shoppingcart1
-import dci._
+package examples
 import scala.collection.mutable
+import org.specs2.mutable.Specification
+import org.specs2.specification._
 
 /*
 Shopping cart example, version 1
@@ -41,212 +42,276 @@ Deviations
     1. Shop presents Cart with Products and discounted prices to Customer.
     2. Go to step 5.
 
-5a. Customer credit is too low:
-    1. Shop informs Customer of insufficient funds on credit card.
-        a. Customer removes unaffordable item(s) from Cart:
-            1. Go to step 5.
-        b. Customer terminates order:
-            2. Failure.
+5a. Customer has too low credit:
+    1. Customer removes unaffordable item(s) from Cart.
+    2. Customer aborts order.
 ===========================================================================
-
-Todo: how to prevent "wrong" invocation order?
 */
 
 // 4 basic "dumb" Data types
-case class Product(name: String, price: Int)
-case class Person(name: String, var cash: Int) {
-  val owns = mutable.Map[Int, Product]()
-}
-case class Company(name: String, var cash: Int) {
-  val stock = mutable.Map[Int, Product]()
-  val goldMembers = mutable.Set[Person]()
-}
-case class Order(customer: Person) {
-  val items = mutable.Map[Int, Product]()
+object ShoppingCartModel {
+  case class Product(name: String, price: Int)
+  case class Person(name: String, var cash: Int, owns: mutable.Map[Int, Product] = mutable.Map())
+  case class Company(name: String, var cash: Int, stock: mutable.Map[Int, Product], goldMembers: mutable.Set[Person])
+  case class Order(customer: Person, items: mutable.Map[Int, Product] = mutable.Map())
 }
 
-@context
-class PlaceOrder(Shop: Company, Customer: Person) {
+// Setup for each test
+trait shoppingCart extends Scope {
+  import ShoppingCartModel._
+  val (p1, p2, p3)      = (1, 2, 3)
+  val (wax, tires, bmw) = (p1 -> Product("Wax", 40), p2 -> Product("Tires", 600), p3 -> Product("BMW", 50000))
+  val shop              = Company("Don's Auto shop", 100000, mutable.Map(wax, tires, bmw), mutable.Set())
+  val customer          = Person("Matthew", 20000)
+}
 
-  // Trigger methods
-  def addItem(productId: Int): Option[Product] = Cart.addItem(productId)
-  def removeItem(productId: Int): Option[Product] = Cart.removeItem(productId)
-  def getCurrentItems = Cart.items.toIndexedSeq.sortBy(_._1)
-  def pay = Customer.payOrder
+// Define the Context and test various scenarios
+class ShoppingCart1 extends Specification {
+  import ShoppingCartModel._
 
-  // Roles
-  private val Warehouse = Shop
-  private val Cart = Order(Customer)
+  @context
+  class PlaceOrder(Shop: Company, Customer: Person) {
 
-  role(Customer) {
-    def payOrder: Boolean = {
-      // Sufficient funds?
-      val orderTotal = Cart.total
-      if (orderTotal > Customer.cash)
-        return false
+    // Trigger methods
+    def addItem(productId: Int): Option[Product] = Cart addItem productId
+    def removeItem(productId: Int): Option[Product] = Cart removeItem productId
+    def getCurrentItems = Cart.items.toIndexedSeq.sortBy(_._1)
+    def pay = Customer.payOrder
 
-      // Transfer ownership of items
-      Customer.owns ++= Cart.items
-      Customer.cash -= orderTotal
-      Cart.items.foreach(i => Warehouse.stock.remove(i._1))
-      Shop.receivePayment(orderTotal)
-      true
-    }
-    def isGoldMember = Shop.goldMembers.contains(Customer)
-    def reduction = if (Customer.isGoldMember) 0.5 else 1
-  }
+    // Roles
+    private val Warehouse = Shop
+    private val Cart      = Order(Customer)
 
-  role(Shop) {
-    def receivePayment(amount: Int) { Shop.cash += amount }
-  }
+    role Customer {
+      def payOrder: Boolean = {
+        // Sufficient funds?
+        val orderTotal = Cart.total
+        if (orderTotal > Customer.cash)
+          return false
 
-  role(Warehouse) {
-    def has(productId: Int) = Shop.stock.isDefinedAt(productId)
-  }
+        // Transfer ownership of items
+        Customer.owns ++= Cart.items
+        Cart.items foreach (Warehouse.stock remove _._1)
 
-  role(Cart) {
-    def addItem(productId: Int): Option[Product] = {
-      // Check warehouse
-      if (!Warehouse.has(productId))
-        return None
-
-      // Gold member price?
-      val product = Warehouse.stock(productId)
-      val customerPrice = (product.price * Customer.reduction).toInt
-
-      // Add item with adjusted price to Cart
-      val revisedProduct = product.copy(price = customerPrice)
-      Cart.items.put(productId, revisedProduct)
-      Some(revisedProduct)
+        // Resolve payment
+        Customer.cash -= orderTotal
+        Shop receivePayment orderTotal
+        true
+      }
+      def isGoldMember = Shop.goldMembers contains Customer
+      def reduction = if (Customer.isGoldMember) 0.5 else 1
     }
 
-    def removeItem(productId: Int): Option[Product] = {
-      if (!Cart.items.isDefinedAt(productId))
-        return None
-      Cart.items.remove(productId)
+    role Shop {
+      def receivePayment(amount: Int) { Shop.cash += amount }
     }
 
-    def total = Cart.items.map(_._2.price).sum
-  }
-}
+    role Warehouse {
+      def has(productId: Int) = Shop.stock isDefinedAt productId
+    }
 
-// Environment (Controller or the like...)
-object TestPlaceOrder extends App {
-  var shop: Company = _
-  var customer: Person = _
-  def reset() {
-    shop = Company("Don's Auto shop", 100000)
-    shop.stock ++= List(
-      1 -> Product("Wax", 40),
-      2 -> Product("Tires", 600),
-      3 -> Product("BMW", 50000))
-    customer = Person("Matthew", 20000)
-  }
-  def showResult(msg: String = "") {
-    println(s"$msg" +
-      "\n--------------------------------------------------" +
-      s"\n- Customer cash: ${customer.cash}" +
-      s"\n- Customer owns: ${customer.owns.toIndexedSeq.sortBy(_._1).mkString("\n")}" +
-      s"\n- Shop cash : ${shop.cash}\n"
-    )
-  }
-  reset()
-  showResult("SHOPPING CART 1")
+    role Cart {
+      def addItem(productId: Int): Option[Product] = {
+        // In stock?
+        if (!Warehouse.has(productId))
+          return None
 
-  // Various scenarios
-  {
-    println("\n######## Main success scenario ####################")
-    println(s"Step 1: Customer selects product(s) in UI")
-    val desiredProduct = 1
+        // Gold member price?
+        val product = Warehouse.stock(productId)
+        val customerPrice = (product.price * Customer.reduction).toInt
+
+        // Add item with adjusted price to Cart
+        val revisedProduct = product.copy(price = customerPrice)
+        Cart.items.put(productId, revisedProduct)
+        Some(revisedProduct)
+      }
+
+      def removeItem(productId: Int): Option[Product] = {
+        if (!Cart.items.isDefinedAt(productId))
+          return None
+        Cart.items.remove(productId)
+      }
+
+      def total = Cart.items.map(_._2.price).sum
+    }
+  }
+
+
+  // Test various scenarios
+
+  "Main success scenario" in new shoppingCart {
+
+    // Initial status (same for all tests...)
+    shop.stock === Map(wax, tires, bmw)
+    shop.cash === 100000
+    customer.cash === 20000
+    customer.owns === Map()
+
+    // hm... when is order created? When customer selects first product?
     val order = new PlaceOrder(shop, customer)
-    order.addItem(desiredProduct)
-    val otherDesiredProduct = 2
-    order.addItem(otherDesiredProduct)
-    println(s"Step 2: 2 items added to cart (step 1-2 repeated)")
-    println(s"Step 3: Customer requests to review order")
-    println(s"Step 4: Shop presents items in cart: \n${order.getCurrentItems.mkString("\n")}")
-    println(s"Step 5: Customer requests to pay order")
-    val paymentStatus = order.pay
-    println(s"Step 6: Order completed? $paymentStatus\n")
-    showResult("Customer bought wax for 40:")
+
+    // Step 1: Customer selects product(s) in UI
+    // Step 2: 2 items added to cart (step 1-2 repeated)
+    order.addItem(p1)
+    order.addItem(p2)
+
+    // Step 3: Customer requests to review order
+    // Step 4: Shop presents items in cart:
+    order.getCurrentItems === Seq(wax, tires)
+
+    // Step 5: Customer requests to pay order
+    val orderCompleted = order.pay
+
+    // Step 6: Order completed?
+    orderCompleted === true
+
+    // Outcome
+    shop.stock === Map(bmw)
+    shop.cash === 100000 + 40 + 600
+    customer.cash === 20000 - 40 - 600
+    customer.owns === Map(wax, tires)
   }
-  {
-    reset()
-    println("\n######## Scenario A ###############################")
-    val desiredProduct = 1
-    shop.stock.remove(desiredProduct)
+
+  "Deviation 2a - Product out of stock" in new shoppingCart {
+
+    // Wax is out of stock!
+    shop.stock.remove(p1)
+    shop.stock === Map(tires, bmw)
+
     val order = new PlaceOrder(shop, customer)
-    val itemAdded = order.addItem(desiredProduct)
-    if (itemAdded == None)
-      println(s"@@ Deviation 2a: Product $desiredProduct out of stock!\n")
-    val otherDesiredProduct = 2
-    order.addItem(otherDesiredProduct)
-    order.pay
-    showResult("Customer bought tires instead for 600:")
+
+    // Customer wants wax
+    val itemAdded = order.addItem(p1)
+
+    // 2a. Product out of stock!
+    shop.stock.contains(p1) === false
+
+    // 2a.1. Shop informs Customer that Product is out of stock.
+    itemAdded === None
+    order.getCurrentItems === Seq()
+
+    // 2a.2. Customer picks tires instead
+    order.addItem(p2)
+
+    // Order completed
+    val orderCompleted = order.pay === true
+
+    // Outcome
+    shop.stock === Map(bmw)
+    shop.cash === 100000 + 600
+    customer.cash === 20000 - 600
+    customer.owns === Map(tires)
   }
-  {
-    reset()
-    println("\n######## Scenario B ###############################")
-    val wax = 1
+
+  "Deviation 4a - Customer has gold membership" in new shoppingCart {
+
+    // Customer is gold member
     shop.goldMembers.add(customer)
+
     val order = new PlaceOrder(shop, customer)
-    order.addItem(wax)
-    println(s"@@ Deviation 4a: Customer is gold member\n")
-    order.pay
-    showResult("Customer has paid half price of 20:")
-  }
-  {
-    reset()
-    println("\n######## Scenario C ###############################")
-    val desiredProduct = 3
-    val order = new PlaceOrder(shop, customer)
-    val itemAdded = order.addItem(desiredProduct)
-    val paymentCompleted = order.pay
-    if (!paymentCompleted)
-      println(s"@@ Deviation 5a: Insufficient funds for ${itemAdded.get.name}\n")
-    showResult("Order placement aborted:")
+
+    // Customer orders wax
+    order.addItem(p1)
+
+    // 4a. Customer has gold membership
+    shop.goldMembers.contains(customer) === true
+
+    // 4a.1. Shop presents Cart with wax at discounted price
+    val discountedWax = 1 -> Product("Wax", (40 * 0.5).toInt)
+    order.getCurrentItems === Seq(discountedWax)
+
+    // Order completed
+    val orderCompleted = order.pay === true
+
+    // Outcome
+    shop.stock === Map(tires, bmw)
+    shop.cash === 100000 + 20
+    customer.cash === 20000 - 20
+    customer.owns === Map(discountedWax)
   }
 
-  // All deviations and trigger methods in play...
-  {
-    reset()
-    println("\n######## Scenario ABC #############################")
-    // Tires out of stock
-    val tires = 2
-    shop.stock.remove(tires)
+  "Deviation 5a - Customer has too low credit" in new shoppingCart {
+
+    val order = new PlaceOrder(shop, customer)
+
+    // Customer wants a BMW
+    val itemAdded = order.addItem(p3)
+
+    // Any product is added - shop doesn't yet know if customer can afford it
+    itemAdded === Some(bmw._2)
+    order.getCurrentItems === Seq(bmw)
+
+    // 5. Customer tries to pay order
+    val paymentStatus = order.pay
+
+    // 5a. Shop informs Customer of too low credit
+    paymentStatus === false
+
+    // 5a.1. Customer removes unaffordable BMW from cart
+    order.removeItem(p3)
+
+    // Customer aborts shopping
+    shop.stock === Map(wax, tires, bmw)
+    shop.cash === 100000
+    customer.cash === 20000
+    customer.owns === Map()
+  }
+
+  "All deviations in play" in new shoppingCart {
+
+    // Tires are out of stock
+    shop.stock.remove(p2)
+    shop.stock === Map(wax, bmw)
 
     // We have a gold member
     shop.goldMembers.add(customer)
+
     val order = new PlaceOrder(shop, customer)
 
-    // Trying to buy tires
-    val itemAdded = order.addItem(tires)
-    if (itemAdded == None)
-      println(s"@@ Deviation 2a: Product $tires out of stock!")
+    // Let's get some tires
+    val tiresItemAdded = order.addItem(p2)
 
-    // Let's buy the BMW instead then - as a gold member that should be possible!
-    val BMW = 3
-    val newItemAdded = order.addItem(BMW)
-    println(s"@@ Deviation 4a: Customer is gold member")
-    val paymentCompleted = order.pay
+    // 2a. Product out of stock!
+    shop.stock.contains(p2) === false
 
-    // Ouch - still too expensive
-    if (!paymentCompleted)
-      println(s"@@ Deviation 5a: ${customer.cash} not enough to buy  " +
-        s"${newItemAdded.get.name} (${newItemAdded.get.price} needed)")
+    // Nothing added to order yet
+    tiresItemAdded === None
+    order.getCurrentItems === Seq()
+
+    // Let's buy the BMW instead. As a gold member that should be possible!
+    val bmwItemAdded = order.addItem(p3)
+
+    // Discounted BMW is added to order
+    val discountedBMW = Product("BMW", (50000 * 0.5).toInt)
+    bmwItemAdded === Some(discountedBMW)
+    order.getCurrentItems === Seq(p3 -> discountedBMW)
+
+    // Ouch! We couldn't afford it.
+    val paymentAttempt1 = order.pay === false
+
+    // It's still 5000 too much for us, even with the membership discount
+    discountedBMW.price - customer.cash === 5000
 
     // Ok, no new car today
-    order.removeItem(BMW)
-    println(s"@@ Deviation 5a.1.a: Remove unaffordable item from cart" +
-      s"\n${order.getCurrentItems.mkString("\n")}")
+    order.removeItem(p3)
+
+    // Order is back to empty
+    order.getCurrentItems === Seq()
 
     // Let's get some wax anyway...
-    order.addItem(1)
+    val waxItemAdded = order.addItem(p1)
 
-    // Now we can afford it
-    order.pay
+    // Did we get our membership discount on this one?
+    val discountedWax = Product("Wax", (40 * 0.5).toInt)
+    waxItemAdded === Some(discountedWax)
 
-    showResult("Gold customer can't get out-of-stock tires, neither " +
-      "too expensive BMW (even with gold discount). Ok, some wax then:")
+    // Now we can afford it!
+    val paymentAttempt2 = order.pay === true
+
+    // Not much shopping done Today. At least we got some cheap wax.
+    shop.stock === Map(bmw)
+    shop.cash === 100000 + 20
+    customer.cash === 20000 - 20
+    customer.owns === Map(p1 -> discountedWax)
   }
 }

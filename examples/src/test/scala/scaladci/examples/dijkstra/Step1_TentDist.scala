@@ -1,6 +1,5 @@
 package scaladci
 package examples.dijkstra
-import dci._
 import collection.mutable
 /*
 Some background info about how the type macro transformation of the Abstract Syntax Tree (AST) enables us to
@@ -30,7 +29,7 @@ object can come from anywhere.
 Inside curly braces that matches the second arguments list (roleMethods: => Unit), we can supply our role
 methods as we do with our first role method assignTentativeDistances in the Role "TentativeDistances":
 
-    role(TentativeDistances) {
+    role TentativeDistances {
       def assignTentativeDistances {
         ...
       }
@@ -100,7 +99,7 @@ object Step1_TentDist extends App {
     println("Tentative distances after :\n" + TentativeDistances.mkString("\n"))
 
     // Adding the first "housekeeping" role, given a role name after the data it "administrates"
-    role(TentativeDistances) {
+    role TentativeDistances {
 
       // First role method defined
       def assignTentativeDistances {

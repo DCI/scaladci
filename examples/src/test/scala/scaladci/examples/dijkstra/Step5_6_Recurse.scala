@@ -1,8 +1,6 @@
 package scaladci
 package examples.dijkstra
-
 import collection.mutable
-import dci._
 
 /*
 Now comes the recursive part since we want to calculate tentative distances to neighbor Intersections until we
@@ -87,19 +85,19 @@ object Step5_6_Recurse extends App {
 
     // Roles ##################################################################
 
-    role(TentativeDistances) {
+    role TentativeDistances {
       def initialize() {
         TentativeDistances.put(CurrentIntersection, 0)
         City.intersections.filter(_ != CurrentIntersection).foreach(TentativeDistances.put(_, Int.MaxValue / 4))
       }
     }
 
-    role(Detours) {
+    role Detours {
       def initialize() { Detours ++= City.intersections }
       def withSmallestTentativeDistance = { Detours.reduce((x, y) => if (TentativeDistances(x) < TentativeDistances(y)) x else y) }
     }
 
-    role(CurrentIntersection) {
+    role CurrentIntersection {
       def calculateTentativeDistanceOfNeighbors() {
         City.eastNeighbor.foreach(updateNeighborDistance(_))
         City.southNeighbor.foreach(updateNeighborDistance(_))
@@ -119,7 +117,7 @@ object Step5_6_Recurse extends App {
       def lengthOfBlockTo(neighbor: Intersection) = City.distanceBetween(CurrentIntersection, neighbor)
     }
 
-    role(City) {
+    role City {
       def distanceBetween(from: Intersection, to: Intersection) = City.blockLengths(Block(from, to))
       def eastNeighbor = City.nextDownTheStreet.get(CurrentIntersection)
       def southNeighbor = City.nextAlongTheAvenue.get(CurrentIntersection)

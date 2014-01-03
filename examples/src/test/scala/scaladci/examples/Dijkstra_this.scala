@@ -1,19 +1,22 @@
 package scaladci
 package examples
-
 import collection.mutable
-import dci._
+import org.specs2.mutable._
 
 /*
 DCI implementation of the Dijkstra algorithm
-Here using "this" as a reference to the RolePlayer.
+Using `this` as role identifier.
 
-ATTENTION: Our use of "this" here is not Scala-idiomatic since "this" would normally
-point to the Dijkstra Context instance. Our Context transformer macro instead turns "this"
+ATTENTION: Our use of `this` here is not Scala-idiomatic since `this` would normally
+point to the Dijkstra Context instance. Our Context transformer macro instead turns `this`
 into a DCI-idiomatic reference to the Role Player. Inside each role definition body we can
 maintain the impression of working with "this role".
 */
-object Dijkstra_this extends App {
+class Dijkstra_this extends Specification {
+
+  // Data
+  case class Intersection(name: Char)
+  case class Block(x: Intersection, y: Intersection)
 
   @context
   class Dijkstra(
@@ -31,7 +34,7 @@ object Dijkstra_this extends App {
       Detours.initialize
     }
     CurrentIntersection.calculateTentativeDistanceOfNeighbors
-    if (Detours.contains(Destination)) {
+    if (Detours contains Destination) {
       val nextCurrent = Detours.withSmallestTentativeDistance
       new Dijkstra(City, nextCurrent, destination, TentativeDistances, Detours, shortcuts)
     }
@@ -41,21 +44,21 @@ object Dijkstra_this extends App {
     def shortestPath = pathTo(destination).reverse
 
     // Roles
-    role(TentativeDistances) {
+    role TentativeDistances {
       def initialize {
         this.put(CurrentIntersection, 0)
         City.intersections.filter(_ != CurrentIntersection).foreach(this.put(_, Int.MaxValue / 4))
       }
     }
-    role(Detours) {
+    role Detours {
       def initialize { this ++= City.intersections }
       def withSmallestTentativeDistance = { this.reduce((x, y) => if (TentativeDistances(x) < TentativeDistances(y)) x else y) }
     }
-    role(CurrentIntersection) {
+    role CurrentIntersection {
       def calculateTentativeDistanceOfNeighbors {
-        City.eastNeighbor.foreach(updateNeighborDistance(_))
-        City.southNeighbor.foreach(updateNeighborDistance(_))
-        Detours.remove(this)
+        City.eastNeighbor foreach updateNeighborDistance
+        City.southNeighbor foreach updateNeighborDistance
+        Detours remove this
       }
       def updateNeighborDistance(neighborIntersection: Intersection) {
         if (Detours.contains(neighborIntersection)) {
@@ -70,20 +73,16 @@ object Dijkstra_this extends App {
       def currentDistance = TentativeDistances(CurrentIntersection)
       def lengthOfBlockTo(neighbor: Intersection) = City.distanceBetween(CurrentIntersection, neighbor)
     }
-    role(City) {
+    role City {
       def distanceBetween(from: Intersection, to: Intersection) = this.blockLengths(Block(from, to))
       def eastNeighbor = this.nextDownTheStreet.get(CurrentIntersection)
       def southNeighbor = this.nextAlongTheAvenue.get(CurrentIntersection)
     }
   }
 
-  // Data
-  case class Intersection(name: Char)
-  case class Block(x: Intersection, y: Intersection)
-
   // Environment
   case class ManhattanGrid() {
-    val intersections               = ('a' to 'i').map(Intersection(_)).toList
+    val intersections               = ('a' to 'i').map(Intersection).toList
     val (a, b, c, d, e, f, g, h, i) = (intersections(0), intersections(1), intersections(2), intersections(3), intersections(4), intersections(5), intersections(6), intersections(7), intersections(8))
     val nextDownTheStreet           = Map(a -> b, b -> c, d -> e, e -> f, g -> h, h -> i)
     val nextAlongTheAvenue          = Map(a -> d, b -> e, c -> f, d -> g, f -> i)
@@ -101,7 +100,10 @@ object Dijkstra_this extends App {
   }
   val startingPoint = ManhattanGrid().a
   val destination   = ManhattanGrid().i
-  val shortestPath  = new Dijkstra(ManhattanGrid(), startingPoint, destination).shortestPath
-  println("Dijkstra (using 'this' reference):\n" + shortestPath.map(_.name).mkString(" -> "))
-  // a -> d -> g -> h -> i
+
+
+  "Using `this` as role identifier" >> {
+    val shortestPath = new Dijkstra(ManhattanGrid(), startingPoint, destination).shortestPath
+    shortestPath.map(_.name).mkString(" -> ") === "a -> d -> g -> h -> i"
+  }
 }

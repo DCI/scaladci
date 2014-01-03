@@ -1,4 +1,4 @@
-# DCI with Scala macro annotation
+# Pure DCI in Scala (version 0.4)
 
 _Using Scala 2.10.3 with macro-paradise plugin._
 
@@ -30,14 +30,14 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
 
   Source.withdraw // Interactions start...
 
-  role(Source) {  // role method here is simply a placeholder for a Role implementation
+  role Source {
     def withdraw {
       Source.decreaseBalance(amount)  
       Destination.deposit
     }
   }
 
-  role(Destination) {
+  role Source {
     def deposit {
       Destination.increaseBalance(amount)
     }
@@ -67,7 +67,7 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
 ## "Overriding" instance methods
 In some cases we want to override the instance methods of a domain object with a Role method:
 ```Scala
-  role(Source) {
+  role Source {
     def withdraw {
       Source.decreaseBalance(amount)
       Destination.deposit
@@ -79,7 +79,7 @@ In some cases we want to override the instance methods of a domain object with a
     }
   }
 
-  role(Destination) {
+  role Destination {
     def deposit {
       Destination.increaseBalance(amount)
     }
@@ -102,44 +102,44 @@ which will now turn into
 ```
 Role methods will always take precedence over instance methods when they have the same signature.
 
-## "self" and "this" references to Role Players
-As an alternative to using the Role name to reference a Role Player we can also use "self" or "this".
+## `self` and `this` references to Role Players
+As an alternative to using the Role name to reference a Role Player we can also use `self` or `this`.
 
-If we use "self" our Role definitions would look like this:
+If we use `self` our Role definitions would look like this:
 ```Scala
-  role(Source) {
+  role Source {
     def withdraw {
       self.decreaseBalance(amount)  
       Destination.deposit
     }
   }
 
-  role(Destination) {
+  role Destination {
     def deposit {
       self.increaseBalance(amount)
     }
   }
 ```
 
-If we choose, we can also use "this" as a reference inside Role methods to refer to the Role Player.
-This is not Scala-idiomatic though since "this" would normally point to the Context instance! 
-We have allowed this special DCI-idiomatic meaning of "this" since we want to be able to think of 
+If we choose, we can also use `this` as a reference inside Role methods to refer to the Role Player.
+This is not Scala-idiomatic though since `this` would normally point to the Context instance!
+We have allowed this special DCI-idiomatic meaning of `this` since we want to be able to think of
 "this role" (or "this Role Player") while we define our Role methods:
 ```Scala
-  role(Source) {
+  role Source {
     def withdraw {
       this.decreaseBalance(amount)  
       Destination.deposit
     }
   }
 
-  role(Destination) {
+  role Destination {
     def deposit {
       this.increaseBalance(amount)
     }
   }
 ```
-Using "self" or "this" doesn't change how Role methods take precedence over instance methods.
+Using `self` or `this` doesn't change how Role methods take precedence over instance methods.
 
 
 ## Multiple roles
@@ -153,20 +153,20 @@ class MyContext(SomeRole: MyData) {
   
   SomeRole.foo() // prints "Hello world"
   
-  role(SomeRole) {
+  role SomeRole {
     def foo() {
       SomeRole.doMyDataStuff()
       OtherRole.bar()
     }
   }
   
-  role(OtherRole) {
+  role OtherRole {
     def bar() {
       LocalRole.say("Hello")
     }
   }
   
-  role(LocalRole) {
+  role LocalRole {
     def say(s: String) {
       println(s + " world")
     }
@@ -175,7 +175,7 @@ class MyContext(SomeRole: MyData) {
 ```
 As you see in line 3, OtherRole is simply a reference pointing to the MyData instance (named SomeRole). 
 
-Inside each role definition we can still use "self" and "this".
+Inside each role definition we can still use `self` and `this`.
 
 We can add as many references/role definitions as we want. This is a way to 
 allow different Roles of a Use Case each to have their own meaningful namespace for defining their 
@@ -185,9 +185,16 @@ role-specific behavior / role methods.
 ```
 git clone https://github.com/DCI/scaladci.git
 cd scaladci
-./sbt
-gen-idea
+sbt
+gen-idea // (if you use IntelliJ)
 ```
+
+*NOTE: To use scaladci in your own project, you need to place it in a separate 
+sbt-project and let your own project depend on the scaladci project. This will 
+allow the macro transformation to take place in a separate compilation run. 
+Please have a look at the [build file of scaladci](
+https://github.com/DCI/scaladci/blob/master/project/build.scala) to see how 
+this is set up.*
 
 Solution inspired by Risto Välimäki's 
 [post](https://groups.google.com/d/msg/object-composition/ulYGsCaJ0Mg/rF9wt1TV_MIJ)
@@ -198,7 +205,7 @@ DCI language by Rune Funch.
 Have fun!
 
 Marc Grue<br>
-October 2013
+January 2014
 
 
 

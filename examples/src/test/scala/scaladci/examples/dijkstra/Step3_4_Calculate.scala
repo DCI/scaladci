@@ -1,7 +1,6 @@
 package scaladci
 package examples.dijkstra
 import collection.mutable
-import dci._
 /*
 Now comes the meaty part of calculating the tentative distances:
 
@@ -46,18 +45,18 @@ object Step3_4_Calculate extends App {
 
     // Roles ##################################################################
 
-    role(TentativeDistances) {
+    role TentativeDistances {
       def initialize() {
         TentativeDistances.put(CurrentIntersection, 0)
         City.intersections.filter(_ != CurrentIntersection).foreach(TentativeDistances.put(_, Int.MaxValue / 4))
       }
     }
 
-    role(Detours) {
+    role Detours {
       def initialize() { Detours ++= City.intersections }
     }
 
-    role(CurrentIntersection) {
+    role CurrentIntersection {
       def calculateTentativeDistanceOfNeighbors() {
 
         // STEP 3 in the algorithm
@@ -84,7 +83,7 @@ object Step3_4_Calculate extends App {
       def lengthOfBlockTo(neighbor: Intersection) = City.distanceBetween(CurrentIntersection, neighbor)
     }
 
-    role(City) {
+    role City {
       def distanceBetween(from: Intersection, to: Intersection) = City.blockLengths(Block(from, to))
     }
   }

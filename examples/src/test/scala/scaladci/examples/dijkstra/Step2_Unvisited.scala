@@ -1,7 +1,6 @@
 package scaladci
 package examples.dijkstra
 import collection.mutable
-import scaladci.dci._
 /*
 Unvisited set...
 
@@ -31,7 +30,7 @@ object Step2_Unvisited extends App {
 
     // Roles ##################################################################
 
-    role(TentativeDistances) {
+    role TentativeDistances {
       def assignTentativeDistances() {
         TentativeDistances.put(CurrentIntersection, 0)
         City.intersections.filter(_ != CurrentIntersection).foreach(TentativeDistances.put(_, Int.MaxValue / 4))
@@ -39,7 +38,7 @@ object Step2_Unvisited extends App {
     }
 
     // A second role is added in a similar fashion to the first one
-    role(Detours) {
+    role Detours {
 
       // STEP 2 - All intersections are unvisited from the start so we simply copy the Intersections from the Grid
       def markAsUnvisited() {

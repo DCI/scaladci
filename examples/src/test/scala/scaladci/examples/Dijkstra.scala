@@ -1,12 +1,16 @@
 package scaladci
-package examples.dijkstra
-
+package examples
 import collection.mutable
-import dci._
+import org.specs2.mutable._
 
 // DCI implementation of the Dijkstra algorithm
+// Using role name as role identifier
 
-object Dijkstra extends App {
+class Dijkstra extends Specification {
+
+  // Data
+  case class Intersection(name: Char)
+  case class Block(x: Intersection, y: Intersection)
 
   @context
   class Dijkstra(
@@ -24,31 +28,31 @@ object Dijkstra extends App {
       Detours.initialize
     }
     CurrentIntersection.calculateTentativeDistanceOfNeighbors
-    if (Detours.contains(Destination)) {
+    if (Detours contains Destination) {
       val nextCurrent = Detours.withSmallestTentativeDistance
       new Dijkstra(City, nextCurrent, destination, TentativeDistances, Detours, shortcuts)
     }
 
     // Context helper methods
-    def pathTo(x: Intersection): List[Intersection] = { if (!shortcuts.contains(x)) List(x) else x :: pathTo(shortcuts(x)) }
+    def pathTo(x: Intersection): List[Intersection] = if (!shortcuts.contains(x)) List(x) else x :: pathTo(shortcuts(x))
     def shortestPath = pathTo(destination).reverse
 
     // Roles
-    role(TentativeDistances) {
+    role TentativeDistances {
       def initialize {
         TentativeDistances.put(CurrentIntersection, 0)
         City.intersections.filter(_ != CurrentIntersection).foreach(TentativeDistances.put(_, Int.MaxValue / 4))
       }
     }
-    role(Detours) {
+    role Detours {
       def initialize { Detours ++= City.intersections }
       def withSmallestTentativeDistance = { Detours.reduce((x, y) => if (TentativeDistances(x) < TentativeDistances(y)) x else y) }
     }
-    role(CurrentIntersection) {
+    role CurrentIntersection {
       def calculateTentativeDistanceOfNeighbors {
-        City.eastNeighbor.foreach(updateNeighborDistance(_))
-        City.southNeighbor.foreach(updateNeighborDistance(_))
-        Detours.remove(CurrentIntersection)
+        City.eastNeighbor foreach updateNeighborDistance
+        City.southNeighbor foreach updateNeighborDistance
+        Detours remove CurrentIntersection
       }
       def updateNeighborDistance(neighborIntersection: Intersection) {
         if (Detours.contains(neighborIntersection)) {
@@ -63,20 +67,16 @@ object Dijkstra extends App {
       def currentDistance = TentativeDistances(CurrentIntersection)
       def lengthOfBlockTo(neighbor: Intersection) = City.distanceBetween(CurrentIntersection, neighbor)
     }
-    role(City) {
+    role City {
       def distanceBetween(from: Intersection, to: Intersection) = City.blockLengths(Block(from, to))
       def eastNeighbor = City.nextDownTheStreet.get(CurrentIntersection)
       def southNeighbor = City.nextAlongTheAvenue.get(CurrentIntersection)
     }
   }
 
-  // Data
-  case class Intersection(name: Char)
-  case class Block(x: Intersection, y: Intersection)
-
   // Environment
   case class ManhattanGrid() {
-    val intersections               = ('a' to 'i').map(Intersection(_)).toList
+    val intersections               = ('a' to 'i').map(Intersection).toList
     val (a, b, c, d, e, f, g, h, i) = (intersections(0), intersections(1), intersections(2), intersections(3), intersections(4), intersections(5), intersections(6), intersections(7), intersections(8))
     val nextDownTheStreet           = Map(a -> b, b -> c, d -> e, e -> f, g -> h, h -> i)
     val nextAlongTheAvenue          = Map(a -> d, b -> e, c -> f, d -> g, f -> i)
@@ -94,7 +94,10 @@ object Dijkstra extends App {
   }
   val startingPoint = ManhattanGrid().a
   val destination   = ManhattanGrid().i
-  val shortestPath  = new Dijkstra(ManhattanGrid(), startingPoint, destination).shortestPath
-  println("Dijkstra:\n" + shortestPath.map(_.name).mkString(" -> "))
-  // a -> d -> g -> h -> i
+
+
+  "Using role name as role identifier" >> {
+    val shortestPath = new Dijkstra(ManhattanGrid(), startingPoint, destination).shortestPath
+    shortestPath.map(_.name).mkString(" -> ") === "a -> d -> g -> h -> i"
+  }
 }
