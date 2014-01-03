@@ -31,14 +31,14 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
   Source.withdraw // Interactions start...
 
   role Source {
-    def withdraw {
+    def withdraw() {
       Source.decreaseBalance(amount)  
       Destination.deposit
     }
   }
 
-  role Source {
-    def deposit {
+  role Destination {
+    def deposit() {
       Destination.increaseBalance(amount)
     }
   }
