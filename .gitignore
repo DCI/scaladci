@@ -1,5 +1,7 @@
 .idea
 .idea_modules
+demo/.idea
+demo/.idea_modules
 target
 project/boot
 *.swp

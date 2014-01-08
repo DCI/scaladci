@@ -1,14 +1,9 @@
-# DCI in Scala
+# Scala DCI
 
-**A Scala macro annotation that allow us to assign objects to defined Roles 
-in a Context according to DCI.**
+###Let runtime objects play Roles in a DCI Context!
+_Stable version 0.4.1_
 
-- Version 0.4.0
-- Scala 2.10.3 (can easily be adapted to 2.11)
-- Using macro-paradise plugin
-
-The [Data, Context and Interaction (DCI)](http://en.wikipedia.org/wiki/Data,_context_and_interaction) 
-paradigm by Trygve Reenskaug and James Coplien embodies true object-orientation where
+The [Data Context Interaction (DCI)](http://en.wikipedia.org/wiki/Data,_context_and_interaction) paradigm by Trygve Reenskaug and James Coplien embodies true object-orientation where
 runtime Interactions between a network of objects in a particular Context 
 is understood _and_ coded as first class citizens.
 
@@ -19,16 +14,12 @@ case class Account(name: String, var balance: Int) {
   def decreaseBalance(amount: Int) { balance -= amount }
 }
 ```
-This is what we in DCI call a "dumb" data class. It only "knows" about its own data and how
-to manipulate that. The concept of a transfer between two accounts is outside of its
-responsibilities and we delegate this to a Context - the MoneyTransfer context class. 
-In this way we can keep the Account class very slim and avoid that it gradually takes on
-more and more responsibilities for each use case it participates in.
+This is what we in DCI sometimes call a "dumb" data class. It only "knows" about its own data and how to manipulate that. 
+The concept of a transfer between two accounts is outside its responsibilities and we delegate this to a Context - the MoneyTransfer context class. In this way we can keep the Account class very slim and avoid that it gradually takes on more and more responsibilities for each use case it participates in.
 
-In a Money Transfer use case we can imagine a "Source" account where we take the money from
-and a "Destination" account where we put the money. That could be our intuitive "Mental model" 
-of the transfer process. We code the Source and Destination concepts as Roles in the
-Context:
+In a Money Transfer use case we can imagine a "Source" account where we take the money from and a "Destination" account where we put the money. That could be our "Mental Model" of a transfer. Interacting "concepts" of our model we call
+"Roles" and now we can now code those Roles and Interactions directly in a DCI Context:
+
 ```Scala
 @context
 class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
@@ -49,10 +40,15 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
   }
 }
 ```
-Our @context macro annotation transforms the abstract syntaxt tree (AST) of the context 
-class at compile time by prefixing role methods with role names and lifting those
-methods into the context namespace. This is what we get after compilation has transformed our 
-MoneyTransfer context:
+
+We want that source code to map as closely to our mental model as possible so that we can confidently and easily
+overview and reason about _how the objects will interact at runtime_! We want to expect no surprises at runtime. With DCI we have all runtime interactions right there! No need to look through endless convoluted abstractions, tiers, polymorphism etc to answer the reasonable question _where is it actually happening, goddammit?!_
+
+At compile time, our @context macro annotation transforms the abstract syntax tree (AST) of our code to enable our
+_runtime data objects_ to "have" those extra Role Methods. Well, I'm half lying to you; the 
+objects won't "get new methods". Instead we call Role-name prefixed Role methods that are
+lifted into Context scope which accomplishes what we intended in our source code:
+
 ```Scala
 class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
   
@@ -68,6 +64,7 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
   }
 }
 ```
+
 
 ## "Overriding" instance methods
 In some cases we want to override the instance methods of a domain object with a Role method:
@@ -196,8 +193,7 @@ role RoleName {
 ```
 
 for defining a Role and its Role methods we need to make a Scala
-contruct that is valid before our macro annotation can start transforming our code. 
-Maybe there's a way to achieve the above syntax with implicits but Dynamic does the job:
+contruct that is valid before our macro annotation can start transforming our code:
 
 ```scala
 object role extends Dynamic {
@@ -269,7 +265,28 @@ less DCI ideomatic since it looks less like a role definition than a method call
 which is not the intention and result after source code transformation.
 
 
-## Try it
+## Scala DCI demo application
+
+In the [Scala DCI Demo App](https://github.com/DCI/scaladci/tree/master/demo) you can see an example of how to create a DCI project.
+
+
+## Using Scala DCI in your project
+
+ScalaDCI is available for Scala 2.10.3 at [Sonatype](https://oss.sonatype.org/index.html#nexus-search;quick%7Eshapeless). To start coding with DCI in Scala add the following to your SBT build file:
+
+    libraryDependencies ++= Seq(
+      "com.marcgrue" %% "scaladci" % "0.4.1"
+    ),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0-M2" cross CrossVersion.full)
+
+
+## Building Scala DCI
+- Scala DCI is built with SBT 0.13.1. 
+- Latest release is version 0.4.1
+- Ongoing development of 0.5.0-SNAPSHOT continues in the master branch
+- Pull requests and comments are welcome! :-)
+
+To build Scala DCI on your local machine:
 ```
 git clone https://github.com/DCI/scaladci.git
 cd scaladci
@@ -277,18 +294,10 @@ sbt
 gen-idea // (if you use IntelliJ)
 ```
 
-*NOTE: To use scaladci in your own project, you need to place it in a separate 
-sbt-project and let your own project depend on the scaladci project. This will 
-allow the macro transformation to take place in a separate compilation run. 
-Please have a look at the [build file of scaladci](
-https://github.com/DCI/scaladci/blob/master/project/build.scala) to see how 
-this is set up.*
+It's relatively easy to modify the code to run on Scala 2.11 too. I'll see if I can make some cross version...
 
-Solution inspired by Risto Välimäki's 
-[post](https://groups.google.com/d/msg/object-composition/ulYGsCaJ0Mg/rF9wt1TV_MIJ)
-and the 
-[Marvin](http://fulloo.info/Examples/Marvin/Introduction/)
-DCI language by Rune Funch. 
+
+
 
 Have fun!
 
@@ -297,11 +306,15 @@ January 2014
 
 
 
-#### Resources
-DCI:
-[Object-composition](https://groups.google.com/forum/?fromgroups#!forum/object-composition),
-[Full-OO](http://fulloo.info),
-[DCI wiki](http://en.wikipedia.org/wiki/Data,_Context,_and_Interaction)<br>
-Scala:
-[Macro annotations](http://docs.scala-lang.org/overviews/macros/annotations.html), 
-[Macro paradise](http://docs.scala-lang.org/overviews/macros/paradise.html)
+### DCI resources
+Discussions - [Object-composition](https://groups.google.com/forum/?fromgroups#!forum/object-composition)<br/>
+Website - [Full-OO](http://fulloo.info)<br/>
+Wiki - [DCI wiki](http://en.wikipedia.org/wiki/Data,_Context,_and_Interaction)
+
+### Credits
+Trygve Renskaug and James O. Coplien for inventing and developing DCI.
+
+Scala DCI solution inspired by Risto 
+Välimäki's [post](https://groups.google.com/d/msg/object-composition/ulYGsCaJ0Mg/rF9wt1TV_MIJ) and
+Rune Funch's [Marvin](http://fulloo.info/Examples/Marvin/Introduction/) DCI 
+language (now [Maroon](http://runefs.com/2013/02/14/using-moby-to-do-injectionless-dci-in-ruby/) for Ruby).
