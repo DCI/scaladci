@@ -30,9 +30,9 @@ object build extends Build with BuildSettings {
 
 trait BuildSettings extends Publishing {
 
-  lazy val majorVersion = "0.4.1"
-//  lazy val versionFormat = "%s-SNAPSHOT"
-  lazy val versionFormat = "%s"
+  lazy val majorVersion = "0.5.0"
+  lazy val versionFormat = "%s-SNAPSHOT"
+//  lazy val versionFormat = "%s"
 
   val buildSettings = Defaults.defaultSettings ++ publishSettings ++ Seq(
     organization := "com.marcgrue",

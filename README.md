@@ -1,7 +1,6 @@
 # Scala DCI
 
 ###Let runtime objects play Roles in a DCI Context!
-_Stable version 0.4.1_
 
 The [Data Context Interaction (DCI)](http://en.wikipedia.org/wiki/Data,_context_and_interaction) paradigm by Trygve Reenskaug and James Coplien embodies true object-orientation where
 runtime Interactions between a network of objects in a particular Context 
@@ -296,25 +295,19 @@ gen-idea // (if you use IntelliJ)
 
 It's relatively easy to modify the code to run on Scala 2.11 too. I'll see if I can make some cross version...
 
-
-
-
 Have fun!
 
 Marc Grue<br>
 January 2014
 
-
-
 ### DCI resources
-Discussions - [Object-composition](https://groups.google.com/forum/?fromgroups#!forum/object-composition)<br/>
-Website - [Full-OO](http://fulloo.info)<br/>
+Discussions - [Object-composition](https://groups.google.com/forum/?fromgroups#!forum/object-composition)<br>
+Website - [Full-OO](http://fulloo.info)<br>
 Wiki - [DCI wiki](http://en.wikipedia.org/wiki/Data,_Context,_and_Interaction)
 
 ### Credits
 Trygve Renskaug and James O. Coplien for inventing and developing DCI.
 
-Scala DCI solution inspired by Risto 
-Välimäki's [post](https://groups.google.com/d/msg/object-composition/ulYGsCaJ0Mg/rF9wt1TV_MIJ) and
-Rune Funch's [Marvin](http://fulloo.info/Examples/Marvin/Introduction/) DCI 
-language (now [Maroon](http://runefs.com/2013/02/14/using-moby-to-do-injectionless-dci-in-ruby/) for Ruby).
+Scala DCI solution inspired by<br>
+- Risto Välimäki's [post](https://groups.google.com/d/msg/object-composition/ulYGsCaJ0Mg/rF9wt1TV_MIJ) and
+- Rune Funch's [Marvin](http://fulloo.info/Examples/Marvin/Introduction/) DCI language (now [Maroon](http://runefs.com/2013/02/14/using-moby-to-do-injectionless-dci-in-ruby/) for Ruby).
