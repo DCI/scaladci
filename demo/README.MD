@@ -26,7 +26,6 @@ All you need to create a DCI context and define Roles is to:
 
 And you're ready to instantiate the Context and let the use case roll...
 
-
 ### Building your own app with DCI
 
 You can use this demo app as a template for your own project and just add more dependencies and content as you go. In the [SBT build file](https://github.com/DCI/scaladci/blob/master/demo/project/build.scala) you can see what the minimum requirement is to enable DCI in your own app. It's basically those two lines:
