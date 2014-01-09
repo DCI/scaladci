@@ -71,7 +71,6 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
 }
 ```
 
-
 ## "Overriding" instance methods
 In some cases we want to override the instance methods of a domain object with a Role method:
 ```Scala
