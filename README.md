@@ -16,8 +16,15 @@ case class Account(name: String, var balance: Int) {
 This is what we in DCI sometimes call a "dumb" data class. It only "knows" about its own data and how to manipulate that. 
 The concept of a transfer between two accounts is outside its responsibilities and we delegate this to a Context - the MoneyTransfer context class. In this way we can keep the Account class very slim and avoid that it gradually takes on more and more responsibilities for each use case it participates in.
 
-In a Money Transfer use case we can imagine a "Source" account where we take the money from and a "Destination" account where we put the money. That could be our "Mental Model" of a transfer. Interacting "concepts" of our model we call
-"Roles" and now we can now code those Roles and Interactions directly in a DCI Context:
+From a users point of view we might think of a money transfer as 
+
+- "Move money from one account to another"
+
+and after some more thought specify it further: 
+
+- "Withdraw amount from a source account and deposit the amount in a destination account"
+
+That could be our "Mental Model" of a money transfer. Interacting "concepts" like our "Source" and "Destination" accounts of our mental model we call "Roles" in DCI and we can define them and what they do to accomplish the money transfer in a DCI Context:
 
 ```Scala
 @context
@@ -40,13 +47,13 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
 }
 ```
 
-We want that source code to map as closely to our mental model as possible so that we can confidently and easily
+We want our source code to map as closely to our mental model as possible so that we can confidently and easily
 overview and reason about _how the objects will interact at runtime_! We want to expect no surprises at runtime. With DCI we have all runtime interactions right there! No need to look through endless convoluted abstractions, tiers, polymorphism etc to answer the reasonable question _where is it actually happening, goddammit?!_
 
 At compile time, our @context macro annotation transforms the abstract syntax tree (AST) of our code to enable our
 _runtime data objects_ to "have" those extra Role Methods. Well, I'm half lying to you; the 
 objects won't "get new methods". Instead we call Role-name prefixed Role methods that are
-lifted into Context scope which accomplishes what we intended in our source code:
+lifted into Context scope which accomplishes what we intended in our source code. Our code gets transformed as though we had written this:
 
 ```Scala
 class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
