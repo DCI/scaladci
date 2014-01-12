@@ -22,7 +22,7 @@ class MoneyTransfer1 extends Specification {
   // Using role name as reference to the Role Player - `Source.decreaseBalance(amount)`
 
   @context
-  class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
+  case class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
 
     Source.withdraw
 
@@ -176,7 +176,7 @@ class MoneyTransfer1 extends Specification {
     val budget = Account("Budget", 1000)
 
     // Using role name
-    new MoneyTransfer(salary, budget, 700)
+    MoneyTransfer(salary, budget, 700)
     salary.balance === 3000 - 700
     budget.balance === 1000 + 700
 

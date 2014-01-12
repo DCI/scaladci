@@ -1,6 +1,4 @@
-import scala.language.experimental.macros
 import scala.language.dynamics
-import scala.annotation.StaticAnnotation
 
 package object scaladci {
 
@@ -19,10 +17,4 @@ package object scaladci {
   //  private[scaladci] object role extends Dynamic {
   //    def applyDynamic(obj: Any)(roleBody: Unit) = roleBody
   //  }
-}
-
-package scaladci {
-  class context extends StaticAnnotation {
-    def macroTransform(annottees: Any*) = macro DciContext.transform
-  }
 }
