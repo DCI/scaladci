@@ -12,9 +12,6 @@ class context extends StaticAnnotation {
 
 object ContextTransformer {
 
-  def transformCaller(annottees: Any*): Any = macro transform
-  val role = "role"
-
   def transform(c: MacroContext)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     val helper = new MacroHelper[c.type] {val c0: c.type = c}
     import c.universe._, Flag._, helper._
@@ -32,18 +29,18 @@ object ContextTransformer {
 
     // Reflection helper to analyze context body content
     object ctx {
-      val body           = template.body
-      val roleCandidates = body.collect { case ValDef(_, name, _, _) => name}
-      val roleMethods    = (t: List[Tree]) => t collect { case DefDef(_, meth, _, _, _, _) if meth != nme.CONSTRUCTOR => meth.toString}
-      val roles          = body.collect {
-        case Apply(Select(Ident(kw), roleName), List(Block(roleBody, _))) if kw.toString == role =>
+      val body    = template.body
+      val objects = body.collect { case ValDef(_, name, _, _) => name}
+      val methods = (t: List[Tree]) => t collect { case DefDef(_, meth, _, _, _, _) if meth != nme.CONSTRUCTOR => meth.toString}
+      val roles   = body.collect {
+        case Apply(Select(Ident(TermName("role")), roleName), List(Block(roleBody, _))) =>
           // Check defined role name against available variables in the Context
-          val verifiedRoleName = if (roleCandidates contains roleName) roleName.toString
-          else abort(s"Defined role name `${roleName.toString}` has to match some of the available variables in the Context: " + roleCandidates.mkString(", "))
-          verifiedRoleName -> roleMethods(roleBody)
+          val verifiedRoleName = if (objects contains roleName) roleName.toString
+          else abort(s"Defined role name `${roleName.toString}` has to match some of the available variables in the Context: " + objects.mkString(", "))
+          verifiedRoleName -> methods(roleBody)
 
-        case Apply(Apply(Ident(kw), List(Ident(roleName))), List(Block(roleBody, _))) if kw.toString == role =>
-          roleName.toString -> roleMethods(roleBody)
+        case Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(roleBody, _))) =>
+          roleName.toString -> methods(roleBody)
       }.toMap
 
       def isRoleMethod(qualifier: String, methodName: String) =
@@ -57,10 +54,10 @@ object ContextTransformer {
       override def transform(roleMethodTree: Tree): Tree = roleMethodTree match {
 
         // Disallow nested role definitions
-        case nestedRoleDef@Apply(Select(Ident(kw), nestedRoleName), _) if kw.toString == role             =>
+        case nestedRoleDef@Apply(Select(Ident(TermName("role")), nestedRoleName), _)             =>
           abort(s"Nested role definitions are not allowed.\nPlease remove nested role '${nestedRoleName.toString}' inside the $roleName role.")
           EmptyTree
-        case nestedRoleDef@Apply(Apply(Ident(kw), List(Ident(nestedRoleName))), _) if kw.toString == role =>
+        case nestedRoleDef@Apply(Apply(Ident(TermName("role")), List(Ident(nestedRoleName))), _) =>
           abort(s"Nested role definitions are not allowed.\nPlease remove nested role '${nestedRoleName.toString}' inside the $roleName role.")
           EmptyTree
 
@@ -95,8 +92,8 @@ object ContextTransformer {
 
         // self.roleMethod(params..) => RoleName_roleMethod(params..)
         // Role methods take precedence over instance methods!
-        case selfMethodRef@Apply(Select(Ident(kw), methodName), List(params))
-          if kw.toString == "self" && ctx.isRoleMethod(roleName, methodName.toString) =>
+        case selfMethodRef@Apply(Select(Ident(TermName("self")), methodName), List(params))
+          if ctx.isRoleMethod(roleName, methodName.toString) =>
           val newMethodRef = Apply(Ident(newTermName(roleName + "_" + methodName.toString)), List(params))
           //          comp(selfMethodRef, newMethodRef)
           newMethodRef
@@ -106,7 +103,7 @@ object ContextTransformer {
         // self.instanceMethod => RoleName.instanceMethod
         // someMethod(self) => someMethod(RoleName)
         // possibly other uses?...
-        case Ident(kw) if kw.toString == "self" => Ident(newTermName(roleName))
+        case Ident(TermName("self")) => Ident(newTermName(roleName))
 
         // Transform role method tree recursively
         case x => super.transform(roleMethodTree)
@@ -136,7 +133,7 @@ object ContextTransformer {
 
         // Only allow role methods ("No state in Roles!")
         case otherCodeInRole =>
-//          r(otherCodeInRole)
+          //          r(otherCodeInRole)
           //          abort(s"Roles are only allowed to define methods.\nx")
           abort(s"Roles are only allowed to define methods.\n" +
             s"Please remove the following code from `$roleName`:" +
@@ -154,60 +151,47 @@ object ContextTransformer {
         }
 
         def getRoleBody(body: List[Tree]): List[Tree] = body match {
-          case List(Block(validRoleBody, _))                                   => validRoleBody
-          case noRoleMethod => noRoleMethod
-//          case List(Apply(Select(Ident(TermName("role")), r2), _))             => abortNestedRole(1, r2, roleDef) // role RoleName {...}
-//          case List(Select(Ident(TermName("role")), r2))                       => abortNestedRole(2, r2, roleDef) // role RoleName
-//          case List(Apply(Apply(Ident(TermName("role")), List(Ident(r2))), _)) => abortNestedRole(3, r2, roleDef) // role(RoleName) {...}
-//          case List(Apply(Ident(TermName("role")), List(Ident(r2))))           => abortNestedRole(4, r2, roleDef) // role(RoleName)
-//          case List(Apply(Ident(TermName("role")), List()))                    => abortNestedRole(5, Name("Empty"), roleDef) // role()
-//          case unexpected                                                      =>
-//            abort(s"Unexpected code in role definition of `$roleName`:\n $unexpected\n${showRaw(unexpected)}"); Nil
+          case List(Block(validRoleBody, _)) => validRoleBody
+          case noRoleMethod                  => noRoleMethod
         }
 
         contextTree match {
 
           // role RoleName {...}
           case roleDef@Apply(Select(Ident(TermName("role")), roleName), body) => {
-//          case roleDef@Apply(Select(Ident(TermName("role")), roleName), List(body)) => {
-            val roleBody = getRoleBody(body, roleDef, roleName)
-            val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(roleBody)
-            val newRoleDef = Apply(Select(Ident(newTermName(role)), roleName), List(Block(newRoleBody, Literal(Constant(())))))
-            //          comp(roleDef, newRoleDef)
-//            x(21, roleDef, newRoleDef)
+            val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(getRoleBody(body))
+            val newRoleDef = Apply(Select(Ident(newTermName("role")), roleName), List(Block(newRoleBody, Literal(Constant(())))))
+            //            r(body)
+            //            comp(roleDef, newRoleDef)
+            //            x(21, roleDef, newRoleDef)
             newRoleDef
           }
 
           // role(RoleName) {...}
           case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(body, Literal(Constant(()))))) => {
-            val roleBody = getRoleBody(body, roleDef, roleName)
-            val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(roleBody)
-
-//            val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(body)
-            val newRoleDef = Apply(Apply(Ident(newTermName(role)), List(Ident(roleName))), List(Block(newRoleBody, Literal(Constant(())))))
+            val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(getRoleBody(body))
+            val newRoleDef = Apply(Apply(Ident(newTermName("role")), List(Ident(roleName))), List(Block(newRoleBody, Literal(Constant(())))))
+            //            r(body)
             //          comp(roleDef, newRoleDef)
-//            x(23, roleDef, newRoleDef)
+            //            x(23, roleDef, newRoleDef)
             newRoleDef
           }
 
           // role("RoleNameString") {...}
-          case roleDef@Apply(Apply(Ident(kw), List(Literal(Constant(roleNameString)))), List(Block(roleBody, Literal(Constant(())))))
-            if kw.toString == role =>
+          case roleDef@Apply(Apply(Ident(TermName("role")), List(Literal(Constant(roleNameString)))), List(Block(roleBody, Literal(Constant(()))))) =>
             x(30, roleDef, roleNameString)
             abort("Strings as role name identifiers are not allowed. Please use a variable instead. Found: \"" + roleNameString.toString + "\"")
             EmptyTree
 
           // Disallow return values from role definitions
-          case roleDef@Apply(Apply(Ident(kw), List(Literal(Constant(roleName)))), List(Block(_, returnValue)))
-            if kw.toString == role =>
+          case roleDef@Apply(Apply(Ident(TermName("role")), List(Literal(Constant(roleName)))), List(Block(_, returnValue))) =>
             x(31, roleDef, roleName)
             abort(s"A role definition is not allowed to return a value." +
               s"\nPlease remove the following return code from the '$roleName' role:" +
               s"\n$returnValue\n------------\n${showRaw(roleDef)}\n------------\n$roleDef")
             EmptyTree
 
-          case roleDef@Apply(Apply(Ident(kw), List(Ident(roleName))), List(Block(_, returnValue)))
-            if kw.toString == role =>
+          case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(_, returnValue))) =>
             x(32, roleDef, roleName)
             abort(s"A role definition is not allowed to return a value." +
               s"\nPlease remove the following return code from the `${roleName.toString}` role definition body:" +
@@ -262,28 +246,7 @@ object ContextTransformer {
 
 
 
-    //    Block(
-    //      List(
-    //        ClassDef(Modifiers(), newTypeName("Context"), List(), Template(List(TypeTree()), emptyValDef,
-    //          List(ValDef(Modifiers(PRIVATE | LOCAL | PARAMACCESSOR), newTermName("Foo"), TypeTree().setOriginal(Select(Ident(scala), scala.Int)), EmptyTree),
-    //            DefDef(Modifiers(), nme.CONSTRUCTOR, List(),
-    //              List(List(ValDef(Modifiers(PARAM | PARAMACCESSOR), newTermName("Foo"), TypeTree().setOriginal(Select(Ident(scala), scala.Int)), EmptyTree))),
-    //              TypeTree(),
-    //              Block(List(Apply(Select(Super(This(newTypeName("Context")), tpnme.EMPTY), nme.CONSTRUCTOR), List())), Literal(Constant(())))),
-    //            Apply(
-    //              Apply(Select(Select(Select(This(newTypeName("scaladci")), scaladci.package), newTermName("role")), newTermName("applyDynamic")), List(Literal(Constant("Foo")))),
-    //    List(
-    //      Apply(
-    //        Apply(Select(Select(Select(This(newTypeName("scaladci")), scaladci.package), newTermName("role")), newTermName("applyDynamic")), List(Literal(Constant("Bar")))),
-    //    List(
-    //      Literal(Constant(()))
-    //    )
-    //    ) ) ) ) )
-    //    ) ),
-    //    Literal(Constant(()))
-    //    )
-
-
+    // todo necessary?
     // "Globalize" role methods (Role.roleMethod => Role_roleMethod)
     def globalizeRoleMethodsToContext(contextBody: List[Tree]) = contextBody.flatMap {
       case roleDef@Apply(Select(_, roleName), List(Block(roleBody, _)))             => roleBody.collect {
@@ -295,15 +258,98 @@ object ContextTransformer {
       case otherContextElement                                                      => List(otherContextElement)
     }
 
-    // Transform Context ====================================================================
 
-    // AST transformation phases
+    // Abort any role definition in tree
+    class cleanRoleUse(originalTree: Tree, abortMsg: String) extends Transformer {
+      override def transform(tree: Tree): Tree = tree match {
+        case Ident(TermName("role"))                 => abort(s"Ident - $abortMsg \nCODE: $originalTree\nAST: ${showRaw(originalTree)}")
+
+        case ValDef(_, TermName("role"), _, _)       => abort(s"ValDef - $abortMsg \nCODE: $originalTree\nAST: ${showRaw(originalTree)}")
+        case DefDef(_, TermName("role"), _, _, _, _) => abort(s"DefDef - $abortMsg \nCODE: $originalTree\nAST: ${showRaw(originalTree)}")
+        case ClassDef(_, TypeName("role"), _, _)     => abort(s"ClassDef - $abortMsg \nCODE: $originalTree\nAST: ${showRaw(originalTree)}")
+        case ModuleDef(_, TermName("role"), _)       => abort(s"ModuleDef - $abortMsg \nCODE: $originalTree\nAST: ${showRaw(originalTree)}")
+        case TypeDef(_, TermName("role"), _, _)      => abort(s"TypeDef - $abortMsg \nCODE: $originalTree\nAST: ${showRaw(originalTree)}")
+        case LabelDef(_, TermName("role"), _)        => abort(s"LabelDef - $abortMsg \nCODE: $originalTree\nAST: ${showRaw(originalTree)}")
+        case Template(_, TermName("role"), _)        => abort(s"Template - $abortMsg \nCODE: $originalTree\nAST: ${showRaw(originalTree)}")
+        case CaseDef(TermName("role"), _, _)         => abort(s"CaseDef - $abortMsg \nCODE: $originalTree\nAST: ${showRaw(originalTree)}")
+        case Select(_, TermName("role"))             => abort(s"Select - $abortMsg \nCODE: $originalTree\nAST: ${showRaw(originalTree)}")
+        case _                                       => super.transform(tree)
+      }
+    }
+    object cleanRoleUse {
+      def apply(tree: Tree, msg: String) = new cleanRoleUse(tree, msg).transform(tree)
+    }
+
+
+    def resolveValidRoleDefinitionsInContextScope(body: List[Tree]) = {
+
+      //
+      val xx = body map {
+
+        // Reject -----------------------------------------------------------------------------
+
+        // role
+        // role()
+        // role(null)
+        case Ident(TermName("role"))                                       => abort("`role` keyword without Role name is not allowed")
+        case Apply(Ident(TermName("role")), List())                        => abort("`role` keyword without Role name is not allowed")
+        case Apply(Ident(TermName("role")), List(Literal(Constant(null)))) => abort("`role` keyword without Role name is not allowed")
+
+
+        // role Foo
+        case t@Select(Ident(TermName("role")), roleName) =>
+          abort(s"To avoid postfix clashes, please write `role $roleName {}` instead of `role $roleName`")
+
+        /*
+          role Foo // two lines after each other ...
+          role Bar // ... unintentionally becomes `role.Foo(role).Bar`
+        */
+        case t@Select(Apply(Select(Ident(TermName("role")), roleName), List(Ident(TermName("role")))), roleName2) =>
+          abort(s"To avoid postfix clashes, please write `role $roleName {}` instead of `role $roleName`")
+
+        //            case t@Apply(Select(Apply(Select(Ident(TermName("role")), newTermName("Bar")), List(Ident(TermName("role")))), newTermName("Bar")), List(Literal(Constant(())))) => t
+
+
+        // Accept and transform ----------------------------------------------------------------------------------
+
+        // role Foo {...}
+        case t@Apply(Select(Ident(TermName("role")), roleName), roleBody) => t
+
+
+        // role(Foo)
+        case t@Apply(Ident(TermName("role")), roleBody) => t
+
+
+        // role(Foo) {...}
+        case t@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), roleBody) => t
+        //        case t@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(roleBody, _))) => t
+
+
+        // Check for invalid role definitions ----------------------------------------------------------------------
+
+        case t => cleanRoleUse(t, "Invalid role definition in Context code")
+      }
+
+      xx
+
+    }
+
+    // Transformation phases ====================================================================
+
+    // 0. Original AST
     var contextTree: List[Tree] = template.body
+
+    // 1. Resolve Role definitions in Context scope
+    contextTree = resolveValidRoleDefinitionsInContextScope(contextTree)
+
+    //    x(77, code(ctx.body), raw(ctx.body), contextTree)
+    //    x(77, ctx.body, ctx.objects, ctx.methods, ctx.roles, contextTree)
+    comp(ctx.body, contextTree)
+
     contextTree = roleMethodCallsInContext.transformTrees(contextTree)
-    //    comp(ctx.body, contextTree)
     contextTree = roleTransformer.transformTrees(contextTree)
-//    r(contextTree.last)
-//    x(101, ctx.body, contextTree)
+    //    r(contextTree.last)
+    //    x(101, ctx.body, contextTree)
     contextTree = globalizeRoleMethodsToContext(contextTree)
 
 
@@ -313,22 +359,38 @@ object ContextTransformer {
 }
 
 
-//    Block(
-//      List(
-//        ClassDef(
-//          Modifiers(),
-//          newTypeName("Context"),
-//          List(),
-//          Template(
-//            List(Select(Ident(scala), newTypeName("AnyRef"))),
-//            emptyValDef,
-//            List(
-//              ValDef(Modifiers(PRIVATE | LOCAL | PARAMACCESSOR), newTermName("Foo"), TypeTree().setOriginal(Select(This(newTypeName("RoleBody")), newTypeName("Data"))), EmptyTree),
-//              DefDef(Modifiers(), nme.CONSTRUCTOR, List(), List(List(
-//                ValDef(Modifiers(PARAM | PARAMACCESSOR), newTermName("Foo"), TypeTree().setOriginal(Select(This(newTypeName("RoleBody")), newTypeName("Data"))), EmptyTree))),
-//                TypeTree(),
-//                Block(List(Apply(Select(Super(This(newTypeName("Context")), tpnme.EMPTY), nme.CONSTRUCTOR), List())), Literal(Constant(())))),
-//              Apply(Apply(Select(Select(Select(This(newTypeName("scaladci")), scaladci.package), newTermName("role")), newTermName("applyDynamic")), List(Literal(Constant("Foo")))
-//    ), List(Apply(Apply(Select(Select(Select(This(newTypeName("scaladci")), scaladci.package), newTermName("role")), newTermName("applyDynamic")), List(Literal(Constant("Bar")))),
-//    List(Literal(Constant(())))) ) ) ) ) ) ),
-//    Literal(Constant(()))) )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

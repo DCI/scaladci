@@ -13,8 +13,9 @@ trait MacroHelper[C <: MacroContext] {
     c0.Expr(typeCheckedTree)(c0.WeakTypeTag(typeCheckedTree.tpe))
   }
 
-  def abort(t: Any) {
+  def abort(t: Any)= {
     c0.abort(c0.enclosingPosition, t.toString)
+//    EmptyTree
   }
 
 
@@ -91,5 +92,9 @@ trait MacroHelper[C <: MacroContext] {
     object TermName {
       def apply(s: String) = newTermName(s)
       def unapply(name: TermName): Option[String] = Some(name.toString)
+    }
+    object TypeName {
+      def apply(s: String) = newTypeName(s)
+      def unapply(name: TypeName): Option[String] = Some(name.toString)
     }
 }

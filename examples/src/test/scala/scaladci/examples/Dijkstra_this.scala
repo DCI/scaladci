@@ -44,16 +44,19 @@ class Dijkstra_this extends Specification {
     def shortestPath = pathTo(destination).reverse
 
     // Roles
+
     role TentativeDistances {
       def initialize {
         this.put(CurrentIntersection, 0)
         City.intersections.filter(_ != CurrentIntersection).foreach(this.put(_, Int.MaxValue / 4))
       }
     }
+
     role Detours {
       def initialize { this ++= City.intersections }
       def withSmallestTentativeDistance = { this.reduce((x, y) => if (TentativeDistances(x) < TentativeDistances(y)) x else y) }
     }
+
     role CurrentIntersection {
       def calculateTentativeDistanceOfNeighbors {
         City.eastNeighbor foreach updateNeighborDistance
@@ -73,6 +76,7 @@ class Dijkstra_this extends Specification {
       def currentDistance = TentativeDistances(CurrentIntersection)
       def lengthOfBlockTo(neighbor: Intersection) = City.distanceBetween(CurrentIntersection, neighbor)
     }
+
     role City {
       def distanceBetween(from: Intersection, to: Intersection) = this.blockLengths(Block(from, to))
       def eastNeighbor = this.nextDownTheStreet.get(CurrentIntersection)

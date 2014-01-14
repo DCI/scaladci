@@ -47,14 +47,14 @@ class DuckTyping extends Specification {
     Source.withdraw
 
     role Source {
-      def withdraw {
+      def withdraw() {
         Source.decreaseBalance(amount)
         Destination.deposit
       }
     }
 
     role Destination {
-      def deposit {
+      def deposit() {
         Destination.increaseBalance(amount)
       }
     }
