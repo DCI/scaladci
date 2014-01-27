@@ -2,7 +2,6 @@
 //package syntax
 //
 //import org.specs2.mutable._
-//import scaladci.util.expectCompileError
 //
 //class RoleMethod extends Specification {
 //
@@ -45,6 +44,27 @@
 //
 //  }
 //
+//
+//  "Using `role` as method" >> {
+//
+//    @context
+//    class Context(Bar: Data) {
+//
+//
+//      role(Bar)
+//
+//      role(Bar)()
+//
+//      role(Bar) {}
+//
+//      role(Bar) {
+//        def m = 1
+//      }
+//
+//    }
+//
+//    success
+//  }
 //
 //  "Can't define" >> {
 //

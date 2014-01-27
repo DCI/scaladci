@@ -5,7 +5,6 @@ import scala.reflect.macros.{Context => MacroContext}
 
 trait MacroHelper[C <: MacroContext] {
   val c0: C
-
   import c0.universe._
 
   def expr(tree: Tree) = {
@@ -13,9 +12,9 @@ trait MacroHelper[C <: MacroContext] {
     c0.Expr(typeCheckedTree)(c0.WeakTypeTag(typeCheckedTree.tpe))
   }
 
-  def abort(t: Any)= {
-    c0.abort(c0.enclosingPosition, t.toString)
-//    EmptyTree
+  def abort(t: Any, i: Int = 0) = {
+    val j = if (i > 0) s"($i) " else ""
+    c0.abort(c0.enclosingPosition, j + t.toString.trim)
   }
 
 
@@ -84,17 +83,57 @@ trait MacroHelper[C <: MacroContext] {
   }
 
 
-        object Name {
-          def apply(s: String) = newTermName(s)
-          def unapply(name: Name): Option[String] = Some(name.decoded)
-        }
+  type W[T] = c0.WeakTypeTag[T]
+  type PFT[A] = PartialFunction[Tree, A]
+  type PF = PartialFunction[Tree, Tree]
+  type ToExpr[A] = PFT[Expr[A]]
 
-    object TermName {
-      def apply(s: String) = newTermName(s)
-      def unapply(name: TermName): Option[String] = Some(name.toString)
-    }
-    object TypeName {
-      def apply(s: String) = newTypeName(s)
-      def unapply(name: TypeName): Option[String] = Some(name.toString)
-    }
+  object Name {
+    def apply(s: String) = newTermName(s)
+    def unapply(name: Name): Option[String] = Some(name.decoded)
+  }
+
+  object TermName {
+    def apply(s: String) = newTermName(s)
+    def unapply(name: TermName): Option[String] = Some(name.toString)
+  }
+  object TypeName {
+    def apply(s: String) = newTypeName(s)
+    def unapply(name: TypeName): Option[String] = Some(name.toString)
+  }
+
+  implicit class RichModifiersApi(mods: ModifiersApi) {
+    def hasCtxAnnotation = mods.annotations.collectFirst {
+      case Apply(Select(New(Ident(TypeName("context"))), nme.CONSTRUCTOR), _) => true
+    }.getOrElse(false)
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

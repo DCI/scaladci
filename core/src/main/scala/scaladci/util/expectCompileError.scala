@@ -18,13 +18,15 @@ object expectCompileError {
 
     val codeStr = code.tree match {
       case Literal(Constant(s: String)) => s.stripMargin.trim
-      case x => c.abort(c.enclosingPosition, "Unknown code tree in compile check: " + showRaw(x))
+      case x                            => c.abort(c.enclosingPosition, "Unknown code tree in compile check: " + showRaw(x))
     }
 
     val (expPat, expMsg) = expected match {
-      case null => (null, "EXPECTED SOME ERROR!")
+      case null                               => (null, "EXPECTED SOME ERROR!")
       case Expr(Literal(Constant(s: String))) => val exp = s.stripMargin.trim; (exp, "EXPECTED ERROR:\n" + exp)
     }
+
+
 
     try {
       c.typeCheck(c.parse("{ " + codeStr + " }"))
@@ -33,17 +35,17 @@ object expectCompileError {
           |CODE:
           |$codeStr
           |$expMsg
-          |SHOW:
+          |CODE:
           |${show(c.typeCheck(c.parse("{ " + codeStr + " }")))}
           |--------------------
-          |SHOWRAW
+          |AST:
           |${showRaw(c.typeCheck(c.parse("{ " + codeStr + " }")))}
           |--------------------
          """.stripMargin)
     } catch {
       case e: TypecheckException =>
-        val msg = e.getMessage
-        if ((expected ne null) && expPat != msg)
+        val msg = e.getMessage.trim
+        if ((expected ne null) && !msg.startsWith(expPat))
           c.abort(c.enclosingPosition,
             s"""Type-checking failed in an unexpected way.
                 |CODE:
@@ -53,10 +55,10 @@ object expectCompileError {
                 |$msg
                 |--------------------
               """.stripMargin)
-      //      case t: Throwable          => c.abort(c.enclosingPosition, s"A3 ###  AUCH: $codeStr \n ${t.getMessage}")
+//      case t: Throwable          => c.abort(c.enclosingPosition, s"A3 ###  AUCH: $codeStr \n ${t.getMessage}")
     }
 
-    c.abort(c.enclosingPosition, "C ###  How did we get here?\nCODE:\n" + codeStr + "\n" + expMsg)
+//    c.abort(c.enclosingPosition, "### This passed:\nCODE:\n" + codeStr + "\n" + expMsg) // + "\n" + expPat + "\n" + msg.trim.startsWith(expPat.trim))
 
     reify(())
   }
