@@ -82,22 +82,22 @@ object ContextTransformer {
         // Disallow `this` in role method body
         case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
           abort("`this` in a role method points to the Context and is not allowed in this DCI Context.\n" +
-                  "Please access Context members directly if needed or use `self` to reference the Role Player.")
+            "Please access Context members directly if needed or use `self` to reference the Role Player.")
           EmptyTree
 
-        // Allow `this` in role method body
-        case thisRoleMethodRef@Apply(Select(This(tpnme.EMPTY), methodName), List(params))
-          if ctx.isRoleMethod(roleName, methodName.toString) =>
-          val newMethodRef = Apply(Ident(newTermName(roleName + "_" + methodName.toString)), List(params))
-          //          comp(thisRoleMethodRef, newMethodRef)
-          newMethodRef
-
-        // this.instanceMethod(params..) => RoleName.instanceMethod(params..)
-        // this.instanceMethod() => RoleName.instanceMethod()
-        // this.instanceMethod => RoleName.instanceMethod
-        // someMethod(this) => someMethod(RoleName)
-        // possibly other uses?...
-        case This(tpnme.EMPTY) => Ident(newTermName(roleName))
+        //        // Allow `this` in role method body
+        //        case thisRoleMethodRef@Apply(Select(This(tpnme.EMPTY), methodName), List(params))
+        //          if ctx.isRoleMethod(roleName, methodName.toString) =>
+        //          val newMethodRef = Apply(Ident(newTermName(roleName + "_" + methodName.toString)), List(params))
+        //          //          comp(thisRoleMethodRef, newMethodRef)
+        //          newMethodRef
+        //
+        //        // this.instanceMethod(params..) => RoleName.instanceMethod(params..)
+        //        // this.instanceMethod() => RoleName.instanceMethod()
+        //        // this.instanceMethod => RoleName.instanceMethod
+        //        // someMethod(this) => someMethod(RoleName)
+        //        // possibly other uses?...
+        //        case This(tpnme.EMPTY) => Ident(newTermName(roleName))
 
 
         // self.roleMethod(params..) => RoleName_roleMethod(params..)

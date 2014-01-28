@@ -38,7 +38,7 @@ class RoleBody extends DCIspecification {
 
     @context
     class Context(Foo: Data, Bar: Data) {
-      role Foo {}  // ok without `=`
+      role Foo {} // ok without `=`
       role(Bar) {} // ok without `=`
     }
 
@@ -97,23 +97,21 @@ class RoleBody extends DCIspecification {
 
   "Cannot define types aliases (??)" >> {
 
-    "type" >> {
-      expectCompileError(
-        """
-          @context
-          class Context(Foo: Int) {
-            role Foo {
-              type notAllowed = String   // <-- no type definitions in Roles ...?!
-            }
+    expectCompileError(
+      """
+        @context
+        class Context(Foo: Int) {
+          role Foo {
+            type notAllowed = String   // <-- no type definitions in Roles ...?!
           }
-        """,
-        """
-          |Roles are only allowed to define methods.
-          |Please remove the following code from `Foo`:
-          |CODE: type notAllowed = String
-        """)
-      success
-    }
+        }
+      """,
+      """
+        |Roles are only allowed to define methods.
+        |Please remove the following code from `Foo`:
+        |CODE: type notAllowed = String
+      """)
+    success
   }
 
   "Cannot define other types" >> {

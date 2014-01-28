@@ -1,5 +1,5 @@
 package scaladci
-package semantics
+package syntax
 import util._
 
 class ContextClass extends DCIspecification {
@@ -20,6 +20,7 @@ class ContextClass extends DCIspecification {
 
     @context
     object ObjectContext {
+      // Objects to play a Role are instantiated inside the Context object
       val Foo = Data(42)
       role Foo {}
     }
@@ -67,47 +68,6 @@ class ContextClass extends DCIspecification {
         class role
       """,
       "Context class can't be named `role`")
-
-    success
-  }
-
-  "Cannot define a nested DCI Context" >> {
-
-    expectCompileError(
-      """
-        @context
-        class OuterContext1 {
-          @context
-          class NestedContext1
-        }
-      """,
-      "Can't define nested DCI context `NestedContext1` inside DCI context `OuterContext1`")
-
-    expectCompileError(
-      """
-        @context
-        class OuterContext2(Foo: Data) {
-          role Foo {
-            @context
-            class NestedContext2
-          }
-        }
-      """,
-      "Can't define nested DCI context `NestedContext2` inside DCI context `OuterContext2`")
-
-    expectCompileError(
-      """
-        @context
-        class OuterContext3(Foo: Data) {
-          role Foo {
-            def roleMethod {
-              @context
-              class NestedContext3
-            }
-          }
-        }
-      """,
-      "Can't define nested DCI context `NestedContext3` inside DCI context `OuterContext3`")
 
     success
   }
