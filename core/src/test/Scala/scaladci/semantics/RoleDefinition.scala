@@ -71,6 +71,7 @@ class RoleDefinition extends DCIspecification {
     success
   }
 
+
   "Cannot be inside another Role definition" >> {
 
     expectCompileError(
@@ -81,6 +82,42 @@ class RoleDefinition extends DCIspecification {
         }
       """,
       "(2) Using `role` keyword on a sub level of the Context is not allowed")
+
+    success
+  }
+
+
+  "Cannot be defined twice (defining same Role name twice)" >> {
+
+    expectCompileError(
+      """
+        @context
+        class Context(Foo: Data) {
+          role Foo {}
+          role Foo {}
+        }
+      """,
+      "Can't define role `Foo` twice")
+
+    expectCompileError(
+      """
+        @context
+        class Context(Foo: Data) {
+          role(Foo)()
+          role(Foo)()
+        }
+      """,
+      "Can't define role `Foo` twice")
+
+    expectCompileError(
+      """
+        @context
+        class Context(Foo: Data) {
+          role Foo {}
+          role(Foo)()
+        }
+      """,
+      "Can't define role `Foo` twice")
 
     success
   }

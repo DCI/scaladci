@@ -6,7 +6,7 @@ class ContextClass extends DCIspecification {
 
   // A Context class ...
 
-  "Can only be a class or case class" >> {
+  "Can only be a class, case class or object" >> {
 
     @context
     class ClassContext(Foo: Data) {
@@ -15,6 +15,12 @@ class ContextClass extends DCIspecification {
 
     @context
     case class CaseClassContext(Foo: Data) {
+      role Foo {}
+    }
+
+    @context
+    object ObjectContext {
+      val Foo = Data(42)
       role Foo {}
     }
 
@@ -32,6 +38,16 @@ class ContextClass extends DCIspecification {
       """,
       "Using abstract class as a DCI context is not allowed")
 
+    expectCompileError(
+      """
+        @context
+        val outOfContext = "no go"
+      """,
+      """
+        |Only classes/case classes/objects can be transformed to DCI Contexts. Found:
+        |val outOfContext = "no go"
+      """)
+
     success
   }
 
@@ -43,7 +59,7 @@ class ContextClass extends DCIspecification {
     success
   }
 
-  "Can't be named `role`" >> {
+  "Cannot be named `role`" >> {
 
     expectCompileError(
       """
@@ -55,7 +71,7 @@ class ContextClass extends DCIspecification {
     success
   }
 
-  "Can't define a nested DCI Context" >> {
+  "Cannot define a nested DCI Context" >> {
 
     expectCompileError(
       """

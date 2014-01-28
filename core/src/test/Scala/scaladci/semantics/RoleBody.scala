@@ -6,6 +6,45 @@ class RoleBody extends DCIspecification {
 
   // A Role body ...
 
+
+  "Cannot be assigned to a Role definition" >> {
+
+    expectCompileError(
+      """
+        @context
+        class Context(Foo: Data) {
+          role Foo = {}
+        }
+      """,
+      "(1) Can't assign a Role body to `Foo`. Please remove `=` before the body definition")
+
+    expectCompileError(
+      """
+        @context
+        class Context(Foo: Data) {
+          role(Foo) = {}
+        }
+      """,
+      "(2) Can't assign a Role body to `Foo`. Please remove `=` before the body definition")
+
+    expectCompileError(
+      """
+        @context
+        class Context(Foo: Data) {
+          role() = {}
+        }
+      """,
+      "(8) `role` keyword without Role name is not allowed")
+
+    @context
+    class Context(Foo: Data, Bar: Data) {
+      role Foo {}  // ok without `=`
+      role(Bar) {} // ok without `=`
+    }
+
+    success
+  }
+
   "Can only define role methods" >> {
 
     @context

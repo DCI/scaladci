@@ -72,14 +72,6 @@ object ContextTransformer {
     case class roleMethodTransformer(roleName: String) extends Transformer {
       override def transform(roleMethodTree: Tree): Tree = roleMethodTree match {
 
-        //        // Disallow nested role definitions
-        //        case nestedRoleDef@Apply(Select(Ident(TermName("role")), nestedRoleName), _)             =>
-        //          abort(s"Nested role definitions are not allowed.\nPlease remove nested role '${nestedRoleName.toString}' inside the $roleName role.")
-        //          EmptyTree
-        //        case nestedRoleDef@Apply(Apply(Ident(TermName("role")), List(Ident(nestedRoleName))), _) =>
-        //          abort(s"Nested role definitions are not allowed.\nPlease remove nested role '${nestedRoleName.toString}' inside the $roleName role.")
-        //          EmptyTree
-
         // Transform internal role method calls
         // roleMethod(..) => Role_roleMethod(..)
         case roleMethodRef@Ident(methodName) if ctx.roles(roleName).contains(methodName.toString) =>
@@ -87,11 +79,10 @@ object ContextTransformer {
           //          comp(roleMethodRef, newRoleMethodRef)
           newRoleMethodRef
 
-        // Uncomment if you want to disallow using `this` as a Role identifier
         // Disallow `this` in role method body
         case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
-          abort(s"`this` in a role method points to the Context and is not allowed in this DCI Context. " +
-            s"\nPlease access Context members directly if needed or use 'self' to reference the Role Player.")
+          abort("`this` in a role method points to the Context and is not allowed in this DCI Context.\n" +
+                  "Please access Context members directly if needed or use `self` to reference the Role Player.")
           EmptyTree
 
         // Allow `this` in role method body
@@ -155,8 +146,6 @@ object ContextTransformer {
 
         // Only allow role methods ("No state in Roles!")
         case otherCodeInRole =>
-          //          r(otherCodeInRole)
-          //          abort(s"Roles are only allowed to define methods.\nx")
           abort(s"Roles are only allowed to define methods.\n" +
             s"Please remove the following code from `$roleName`:" +
             s"\nCODE: $otherCodeInRole\nAST: ${showRaw(otherCodeInRole)}")
@@ -178,9 +167,7 @@ object ContextTransformer {
           case roleDef@Apply(Select(Ident(TermName("role")), roleName), body) => {
             val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(getRoleBody(body))
             val newRoleDef = Apply(Select(Ident(newTermName("role")), roleName), List(Block(newRoleBody, Literal(Constant(())))))
-            //            r(body)
             //            comp(roleDef, newRoleDef)
-            //            x(21, roleDef, newRoleDef)
             newRoleDef
           }
 
@@ -188,32 +175,9 @@ object ContextTransformer {
           case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(body, Literal(Constant(()))))) => {
             val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(getRoleBody(body))
             val newRoleDef = Apply(Apply(Ident(newTermName("role")), List(Ident(roleName))), List(Block(newRoleBody, Literal(Constant(())))))
-            //            r(body)
             //          comp(roleDef, newRoleDef)
-            //            x(23, roleDef, newRoleDef)
             newRoleDef
           }
-
-          // role("RoleNameString") {...}
-          case roleDef@Apply(Apply(Ident(TermName("role")), List(Literal(Constant(roleNameString)))), List(Block(roleBody, Literal(Constant(()))))) =>
-            x(30, roleDef, roleNameString)
-            abort("Strings as role name identifiers are not allowed. Please use a variable instead. Found: \"" + roleNameString.toString + "\"")
-            EmptyTree
-
-          // Disallow return values from role definitions
-          case roleDef@Apply(Apply(Ident(TermName("role")), List(Literal(Constant(roleName)))), List(Block(_, returnValue))) =>
-            x(31, roleDef, roleName)
-            abort(s"A role definition is not allowed to return a value." +
-              s"\nPlease remove the following return code from the '$roleName' role:" +
-              s"\nCODE: $returnValue\n------------\nAST: ${showRaw(roleDef)}\n------------\n$roleDef")
-            EmptyTree
-
-          case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(_, returnValue))) =>
-            x(32, roleDef, roleName)
-            abort(s"A role definition is not allowed to return a value." +
-              s"\nPlease remove the following return code from the `${roleName.toString}` role definition body:" +
-              s"\nCODE: $returnValue\n------------\nAST: ${showRaw(roleDef)}\n------------\n$roleDef")
-            EmptyTree
 
           // Transform context tree recursively
           case _ => super.transform(contextTree)

@@ -208,7 +208,7 @@ class RoleAsKeyword extends DCIspecification {
 
     @context
     class Context1(Foo: Data) {
-      role Foo{}
+      role Foo {} // with body
     }
 
     expectCompileError(
@@ -223,8 +223,8 @@ class RoleAsKeyword extends DCIspecification {
 
     @context
     class Context2(Foo: Data, Bar: Data) {
-      role Foo{}
-      role Bar{}
+      role Foo {}
+      role Bar {}
     }
 
     success

@@ -70,43 +70,6 @@ class MoneyTransfer1 extends Specification {
 
 
   /*
-    OBS: MAYBE THE USE OF `this` SHOULD BE DEPRECATED!
-
-    Using `this` as reference to the Role Player - `this.decreaseBalance(amount)`
-
-    ATTENTION: Our use of `this` here is NOT Scala-idiomatic since `this` would normally
-    point to the Context instance!!
-
-    Our Context transformer macro instead turns `this` into a DCI-idiomatic reference
-    to the Role Player. Inside each role definition body we can maintain the impression
-    of working with "this role".
-  */
-  //  @context
-  //  case class MoneyTransfer_this(Source: Account, Destination: Account, amount: Int) {
-  //
-  //    Source.withdraw
-  //
-  //    role Source {
-  //      def withdraw {
-  //        this.decreaseBalance(amount)
-  //        Destination.deposit
-  //      }
-  //    }
-  //
-  //    role Destination {
-  //      def deposit {
-  //        // role method takes precedence over instance method
-  //        this.increaseBalance(amount)
-  //      }
-  //      // Overriding an instance method - this role method takes precedence
-  //      def increaseBalance(amount: Int) {
-  //        val bonus = 10
-  //        this.balance += amount + bonus
-  //      }
-  //    }
-  //  }
-
-  /*
     Alternative role definition syntax where the data instance is supplied as an
     argument to a `role` method.
 
@@ -162,12 +125,6 @@ class MoneyTransfer1 extends Specification {
       }
     }
 
-    //    role Destination {
-    //      def deposit {
-    //        Destination.increaseBalance(amount)
-    //      }
-    //    }
-
     role Destination {
       def deposit {
         // role method takes precedence over instance method
@@ -209,10 +166,5 @@ class MoneyTransfer1 extends Specification {
     MoneyTransfer_mixed(salary, budget, 1)
     salary.balance === 1950 - 1
     budget.balance === 1850 + 1 + 10 // Special bonus in overriding role method
-
-    // Using `this` - DEPRECATE?
-    //    MoneyTransfer_this(salary, budget, 10)
-    //    salary.balance === 2000 - 10
-    //    budget.balance === 1800 + 10 + 10 // Special bonus in overriding role method
   }
 }

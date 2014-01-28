@@ -1,6 +1,8 @@
 package scaladci
 import scala.reflect.macros.{Context => MacroContext}
 import scaladci.util.MacroHelper
+import scala._
+import scala.Some
 
 trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
   import c0.universe._, Flag._
@@ -24,11 +26,10 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
   def isRoleMethod(roleName: String, methodName: String) =
     !roles.isEmpty && roles.contains(roleName) && roles(roleName).contains(methodName)
 
-  def abortRoleUse(tree: Tree, msg: String, i: Int = 0) = {
+  def abortRoleUse(tree: Tree, msg: String, i: Int = 0) =
     abort(s"Using `role` keyword $msg is not allowed.\nCODE: $tree\nAST: ${showRaw(tree)}", i)
-  }
 
-  case class noRoleKW(tree0: Tree) extends Transformer {
+  case class rejectNestedRoleDefinitions(tree0: Tree) extends Transformer {
     def err(msg: String, i: Int = 0) = abortRoleUse(tree0, msg, i)
     override def transform(tree: Tree): Tree = tree match {
       case Apply(Select(Ident(TermName("role")), _), _) /* role Foo {...} */ => err("on a sub level of the Context", 1)
@@ -55,18 +56,32 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
 
     def roleMethods(roleName: Name, t: List[Tree]): List[String] = t collect {
       case DefDef(_, meth, _, _, _, _) if meth != nme.CONSTRUCTOR => meth.toString
-      case tree                                                   => abort(s"Roles are only allowed to define methods.\nPlease remove the following code from `$roleName`:\nCODE: $tree")
+      case tree                                                   => abort(
+        s"Roles are only allowed to define methods.\nPlease remove the following code from `$roleName`:\nCODE: $tree")
     }
 
-    val ctxObjects = ctxBody collect {
-      case ValDef(_, objName, _, _) => objName
-    }
-
-    def verifiedRoleName(roleName: Name): String = {
+    def verifiedRoleName(roleName: Name, i: Int = 0, t: Tree = EmptyTree): String = {
       if (ctxObjects contains roleName) roleName.toString
-      else abort(s"Defined role name `${roleName.toString}` has to match some object identifier in the Context. Available identifiers:\n" + ctxObjects.mkString("\n"))
+      else abort(s"($i) Defined role name `${roleName.toString}` has to match some object identifier in the Context. " +
+        s"Available identifiers:\n" + ctxObjects.mkString("\n")) // + "\n" + showRaw(t))
     }
+
+    def rejectReturnValue(roleName: Name, returnValue: Tree, roleDef: Tree) {
+      if (!returnValue.equalsStructure(Literal(Constant(())))) abort(s"A role definition is not allowed to return a value." +
+        s"\nPlease remove the following return code from the `${roleName.toString}` role definition body:" +
+        s"\nRETURN CODE: $returnValue\nRETURN AST:  ${showRaw(returnValue)}\n" +
+        s"------------\nROLE CODE$roleDef\nROLE AST:  ${showRaw(roleDef)}")
+    }
+
+    def rejectRoleBodyAssignment(roleName: Name, i: Int = 0) = abort(
+      s"($i) Can't assign a Role body to `$roleName`. Please remove `=` before the body definition")
+
+    def rejectConstantAsRoleName(roleType: String, roleName: String, i: Int = 0) = abort(
+      s"($i) $roleType as role name identifier is not allowed. Please use a variable instead. Found: $roleName")
+
     lazy val missingRoleName = "`role` keyword without Role name is not allowed"
+
+    lazy val ctxObjects = ctxBody collect { case ValDef(_, objName, _, _) => objName}
 
     val roles: List[Option[(String, List[String])]] = ctxBody map {
 
@@ -85,10 +100,24 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
       case t@Select(Apply(Select(Ident(TermName("role")), roleName), List(Ident(TermName("role")))), roleName2) =>
         abort(s"(2) To avoid postfix clashes, please write `role $roleName {}` instead of `role $roleName`")
 
+      // role Foo = {...}
+      case t@Assign(Select(Ident(TermName("role")), roleName), _) => rejectRoleBodyAssignment(roleName, 1)
+
       // role
       case Ident(TermName("role")) => abort(missingRoleName, 1)
 
+
       ///////// `role` as method /////////
+
+      // role("Foo")
+      // role(42)
+      // role(42.0)
+      // role(42f)
+      case Apply(Ident(TermName("role")), List(Literal(Constant(roleName: String)))) => rejectConstantAsRoleName("String", roleName, 1)
+      case Apply(Ident(TermName("role")), List(Literal(Constant(roleName: Int))))    => rejectConstantAsRoleName("Integer", roleName.toString, 2)
+      case Apply(Ident(TermName("role")), List(Literal(Constant(roleName: Double)))) => rejectConstantAsRoleName("Double", roleName.toString, 3)
+      case Apply(Ident(TermName("role")), List(Literal(Constant(roleName: Float))))  => rejectConstantAsRoleName("Float", roleName.toString, 4)
+      // Todo: more...?
 
       // role()
       // role{}
@@ -104,50 +133,55 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
       case Apply(Apply(Ident(TermName("role")), List(Literal(Constant(_)))), List())                     => abort(missingRoleName, 6)
       case Apply(Apply(Ident(TermName("role")), List(Literal(Constant(_)))), List(Literal(Constant(_)))) => abort(missingRoleName, 7)
 
+      // role(Foo) = {...}
+      // role() = {...}
+      case t@Apply(Select(Ident(TermName("role")), TermName("update")), List(Ident(roleName), _)) => rejectRoleBodyAssignment(roleName, 2)
+      case t@Apply(Select(Ident(TermName("role")), TermName("update")), _)                        => abort(missingRoleName, 8)
+
 
       // Approved role definitions ----------------------------------------------------------------------
 
       ///////// `role` as keyword /////////
 
       // role Foo {...}
-      case t@Apply(Select(Ident(TermName("role")), roleName), List(Block(roleBody, _))) =>
-        // Reject nested role definitions
-        roleBody.foreach(t => new noRoleKW(t).transform(t))
-        Some(verifiedRoleName(roleName) -> roleMethods(roleName, roleBody))
+      case t@Apply(Select(Ident(TermName("role")), roleName), List(Block(roleBody, returnValue))) =>
+        roleBody.foreach(t => rejectNestedRoleDefinitions(t).transform(t))
+        rejectReturnValue(roleName, returnValue, t)
+        Some(verifiedRoleName(roleName, 1) -> roleMethods(roleName, roleBody))
 
       // Methodless role
       // `role Foo()` or `role Foo {}`
       case t@Apply(Select(Ident(TermName("role")), roleName), _) =>
-        Some(verifiedRoleName(roleName) -> Nil)
+        Some(verifiedRoleName(roleName, 2) -> Nil)
 
 
       ///////// `role` as method /////////
 
       // role(Foo) {...}
-      case t@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(roleBody, _))) =>
-        // Reject nested role definitions
-        roleBody.foreach(t => new noRoleKW(t).transform(t))
-        Some(verifiedRoleName(roleName) -> roleMethods(roleName, roleBody))
+      case t@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(roleBody, returnValue))) =>
+        roleBody.foreach(t => rejectNestedRoleDefinitions(t).transform(t))
+        rejectReturnValue(roleName, returnValue, t)
+        Some(verifiedRoleName(roleName, 3) -> roleMethods(roleName, roleBody))
 
       // Methodless roles
       // `role(Foo)()` or `role(Foo){}`
       case t@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), _) =>
-        Some(verifiedRoleName(roleName) -> Nil)
+        Some(verifiedRoleName(roleName, 4) -> Nil)
 
       // role(Foo)
       case t@Apply(Ident(TermName("role")), List(Ident(roleName))) =>
-        Some(verifiedRoleName(roleName) -> Nil)
+        Some(verifiedRoleName(roleName, 5) -> Nil)
 
 
       // Reject role definitions in remaining Context code -----------------------------------------------
 
       // No remaining uses of `role` keyword
-      case tree => noRoleKW(tree).transform(tree); None
+      case tree => rejectNestedRoleDefinitions(tree).transform(tree); None
     }
 
-    // Role method names for each unique role name
+    // Map(unique role name -> list(role methods))
     roles.flatten.foldLeft(Map[String, List[String]]()) {
-      (rs, r) => if (rs.keys.toList.contains(r._1)) abort(s"Can't define role `${r._1}` twice.") else rs + r
+      (rs, r) => if (rs.keys.toList.contains(r._1)) abort(s"Can't define role `${r._1}` twice") else rs + r
     }
   }
 }
