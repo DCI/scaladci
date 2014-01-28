@@ -206,15 +206,26 @@ class RoleAsKeyword extends DCIspecification {
       """,
       "(1) To avoid postfix clashes, please write `role Foo {}` instead of `role Foo`")
 
+    @context
+    class Context1(Foo: Data) {
+      role Foo{}
+    }
+
     expectCompileError(
       """
         @context
         class Context(Foo: Data, Bar: Data) {
-          role Bar // two lines after each other ...
-          role Foo // ... would unintentionally become `role.Foo(role).Bar`
+          role Foo // two lines after each other ...
+          role Bar // ... would unintentionally become `role.Foo(role).Bar`
         }
       """,
-      "(2) To avoid postfix clashes, please write `role Bar {}` instead of `role Bar`")
+      "(2) To avoid postfix clashes, please write `role Foo {}` instead of `role Foo`")
+
+    @context
+    class Context2(Foo: Data, Bar: Data) {
+      role Foo{}
+      role Bar{}
+    }
 
     success
   }

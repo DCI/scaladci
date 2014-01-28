@@ -100,7 +100,7 @@ class Dijkstra_self extends Specification {
   val destination   = ManhattanGrid().i
 
 
-  "Using `self` as role identifier" >> {
+  "Using `self` as a Role identifier" >> {
     val shortestPath = new Dijkstra(ManhattanGrid(), startingPoint, destination).shortestPath
     shortestPath.map(_.name).mkString(" -> ") === "a -> d -> g -> h -> i"
   }

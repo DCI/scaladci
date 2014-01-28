@@ -26,7 +26,7 @@ class MoneyTransfer2 extends Specification {
   }
 
   @context
-  class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
+  case class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
 
     def transfer() {
       Source.transfer
@@ -63,7 +63,7 @@ class MoneyTransfer2 extends Specification {
     source.balance === 1000
     destination.balance === 0
 
-    val context = new MoneyTransfer(source, destination, 245)
+    val context = MoneyTransfer(source, destination, 245)
     context.transfer()
 
     source.balance === 1000 - 245

@@ -2,13 +2,13 @@ package scaladci
 package examples
 import org.specs2.mutable._
 
-  /*
-    Simplest versions of the canonical Money Transfer example
+/*
+  Simplest versions of the canonical Money Transfer example
 
-    NOTE: If a role method has the same signature as an instance method of the original
-    Data object, the role method will take precedence/override the instance method. This
-    applies to all versions below.
-  */
+  NOTE: If a role method has the same signature as an instance method of the original
+  Data object, the role method will take precedence/override the instance method. This
+  applies to all versions below.
+*/
 
 class MoneyTransfer1 extends Specification {
 
@@ -44,7 +44,7 @@ class MoneyTransfer1 extends Specification {
   // Using `self` as reference to the Role Player - `self.decreaseBalance(amount)`
 
   @context
-  class MoneyTransfer_self(Source: Account, Destination: Account, amount: Int) {
+  case class MoneyTransfer_self(Source: Account, Destination: Account, amount: Int) {
 
     Source.withdraw
 
@@ -70,6 +70,8 @@ class MoneyTransfer1 extends Specification {
 
 
   /*
+    OBS: MAYBE THE USE OF `this` SHOULD BE DEPRECATED!
+
     Using `this` as reference to the Role Player - `this.decreaseBalance(amount)`
 
     ATTENTION: Our use of `this` here is NOT Scala-idiomatic since `this` would normally
@@ -79,30 +81,30 @@ class MoneyTransfer1 extends Specification {
     to the Role Player. Inside each role definition body we can maintain the impression
     of working with "this role".
   */
-  @context
-  class MoneyTransfer_this(Source: Account, Destination: Account, amount: Int) {
-
-    Source.withdraw
-
-    role Source {
-      def withdraw {
-        this.decreaseBalance(amount)
-        Destination.deposit
-      }
-    }
-
-    role Destination {
-      def deposit {
-        // role method takes precedence over instance method
-        this.increaseBalance(amount)
-      }
-      // Overriding an instance method - this role method takes precedence
-      def increaseBalance(amount: Int) {
-        val bonus = 10
-        this.balance += amount + bonus
-      }
-    }
-  }
+  //  @context
+  //  case class MoneyTransfer_this(Source: Account, Destination: Account, amount: Int) {
+  //
+  //    Source.withdraw
+  //
+  //    role Source {
+  //      def withdraw {
+  //        this.decreaseBalance(amount)
+  //        Destination.deposit
+  //      }
+  //    }
+  //
+  //    role Destination {
+  //      def deposit {
+  //        // role method takes precedence over instance method
+  //        this.increaseBalance(amount)
+  //      }
+  //      // Overriding an instance method - this role method takes precedence
+  //      def increaseBalance(amount: Int) {
+  //        val bonus = 10
+  //        this.balance += amount + bonus
+  //      }
+  //    }
+  //  }
 
   /*
     Alternative role definition syntax where the data instance is supplied as an
@@ -127,7 +129,7 @@ class MoneyTransfer1 extends Specification {
     _exact same_ with both styles.
   */
   @context
-  class MoneyTransfer_roleDefMethod(Source: Account, Destination: Account, amount: Int) {
+  case class MoneyTransfer_roleDefMethod(Source: Account, Destination: Account, amount: Int) {
 
     Source.withdraw
 
@@ -146,10 +148,10 @@ class MoneyTransfer1 extends Specification {
   }
 
 
-  // Hey, let's mix all the styles! :-)
+  // Styles can be mixed!
 
   @context
-  class MoneyTransfer_mixed(Source: Account, Destination: Account, amount: Int) {
+  case class MoneyTransfer_mixed(Source: Account, Destination: Account, amount: Int) {
 
     Source.withdraw
 
@@ -160,9 +162,21 @@ class MoneyTransfer1 extends Specification {
       }
     }
 
+    //    role Destination {
+    //      def deposit {
+    //        Destination.increaseBalance(amount)
+    //      }
+    //    }
+
     role Destination {
       def deposit {
-        this.increaseBalance(amount)
+        // role method takes precedence over instance method
+        self.increaseBalance(amount)
+      }
+      // Overriding an instance method - this role method takes precedence
+      def increaseBalance(amount: Int) {
+        val bonus = 10
+        Destination.balance += amount + bonus
       }
     }
   }
@@ -181,23 +195,24 @@ class MoneyTransfer1 extends Specification {
     budget.balance === 1000 + 700
 
     // Using `self`
-    new MoneyTransfer_self(salary, budget, 100)
+    MoneyTransfer_self(salary, budget, 100)
     salary.balance === 2300 - 100 - 200 // Special fee in overriding role method
     budget.balance === 1700 + 100
 
-    // Using `this`
-    new MoneyTransfer_this(salary, budget, 10)
-    salary.balance === 2000 - 10
-    budget.balance === 1800 + 10 + 10 // Special bonus in overriding role method
 
     // Alternative role definition syntax with `role` method
-    new MoneyTransfer_roleDefMethod(salary, budget, 50)
-    salary.balance === 1990 - 50
-    budget.balance === 1820 + 50
+    MoneyTransfer_roleDefMethod(salary, budget, 50)
+    salary.balance === 2000 - 50
+    budget.balance === 1800 + 50
 
     // Alternative role definition syntax with `role` method
-    new MoneyTransfer_roleDefMethod(salary, budget, 1)
-    salary.balance === 1940 - 1
-    budget.balance === 1870 + 1
+    MoneyTransfer_mixed(salary, budget, 1)
+    salary.balance === 1950 - 1
+    budget.balance === 1850 + 1 + 10 // Special bonus in overriding role method
+
+    // Using `this` - DEPRECATE?
+    //    MoneyTransfer_this(salary, budget, 10)
+    //    salary.balance === 2000 - 10
+    //    budget.balance === 1800 + 10 + 10 // Special bonus in overriding role method
   }
 }

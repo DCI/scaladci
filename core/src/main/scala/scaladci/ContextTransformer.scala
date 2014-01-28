@@ -4,11 +4,27 @@ import scala.language.experimental.macros
 import scala.reflect.macros.{Context => MacroContext}
 import scala.annotation.StaticAnnotation
 import scaladci.util.MacroHelper
-import scala._
 
+// Annotation alternatives //////////////////////////////////////////////////
+
+// `@context class Context` ...
 class context extends StaticAnnotation {
   def macroTransform(annottees: Any*) = macro ContextTransformer.transform
 }
+
+// `@dci object Context` ...
+class dci extends StaticAnnotation {
+  def macroTransform(annottees: Any*) = macro ContextTransformer.transform
+}
+
+// Imitating "use case" with a case class Context:
+// `@use case class Context` ...
+class use extends StaticAnnotation {
+  def macroTransform(annottees: Any*) = macro ContextTransformer.transform
+}
+
+
+// AST transformation ///////////////////////////////////////////////////////
 
 object ContextTransformer {
 
@@ -20,25 +36,24 @@ object ContextTransformer {
 
     // Extract main building blocks of context class AST =======================================
 
-    case class abortNestedContextDefinitions(ctxName: String) extends Transformer {
+    val (ctxModifiers, ctxName, ctxTypeDefs, ctxTemplate) = annottees.head.tree match {
+      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(TRAIT)    => abort("Using a trait as a DCI context is not allowed")
+      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(ABSTRACT) => abort("Using abstract class as a DCI context is not allowed")
+      case t@ClassDef(mods, name, tpeDefs, tmpl)              => (mods, name, tpeDefs, tmpl)
+      case t@ModuleDef(mods, name, tmpl)                      => (mods, name, Nil, tmpl)
+      case tree                                               => abort("Only classes/case classes/objects can be transformed to DCI Contexts. Found:\n" + tree)
+    }
+
+    case class abortNestedContextDefinitions(ctxName: NameApi) extends Transformer {
       override def transform(tree: Tree): Tree = tree match {
         case ClassDef(mods, TypeName(nestedCtxName), _, tmpl) if mods.hasCtxAnnotation => abort(
           s"Can't define nested DCI context `$nestedCtxName` inside DCI context `$ctxName`\nCODE: $tree\nAST: ${showRaw(tree)}")
-        case _ => super.transform(tree)
+        case _                                                                         => super.transform(tree)
       }
     }
+    abortNestedContextDefinitions(ctxName).transform(ctxTemplate)
 
-    val (ctxModifiers, ctxClassName, ctxTypeDefs, ctxTemplate) = annottees.head.tree match {
-      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(TRAIT)    => abort("Using a trait as a DCI context is not allowed")
-      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(ABSTRACT) => abort("Using abstract class as a DCI context is not allowed")
-      case ClassDef(mods, ctxName, tpeDefs, tmpl)             => {
-        abortNestedContextDefinitions(ctxName.toString).transform(tmpl)
-        (mods, ctxName, tpeDefs, tmpl)
-      }
-      case tree                                               => abort("Only classes/case classes can be transformed to DCI Contexts. Found:\n" + showRaw(tree))
-    }
-
-    // Analyze and check context AST before transforming
+    // Analyze and check Context AST before transforming
     val ctx = ContextAnalyzer(c)(ctxTemplate)
 
 
@@ -73,11 +88,11 @@ object ContextTransformer {
           newRoleMethodRef
 
         // Uncomment if you want to disallow using `this` as a Role identifier
-        //        Disallow `this` in role method body
-        //        case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
-        //          out(s"`this` in a role method points to the Context and is not allowed in this DCI Context. " +
-        //            s"\nPlease access Context members directly if needed or use 'self' to reference the Role Player.")
-        //          EmptyTree
+        // Disallow `this` in role method body
+        case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
+          abort(s"`this` in a role method points to the Context and is not allowed in this DCI Context. " +
+            s"\nPlease access Context members directly if needed or use 'self' to reference the Role Player.")
+          EmptyTree
 
         // Allow `this` in role method body
         case thisRoleMethodRef@Apply(Select(This(tpnme.EMPTY), methodName), List(params))
@@ -240,7 +255,7 @@ object ContextTransformer {
     // Transformation phases ====================================================================
 
     // Context class
-    if (ctxClassName.toString == "role") abort("Context class can't be named `role`")
+    if (ctxName.toString == "role") abort("Context class can't be named `role`")
 
     // Original Context AST
     var contextTree: List[Tree] = ctxTemplate.body
@@ -257,11 +272,14 @@ object ContextTransformer {
     // Clean up now obsolete role keywords
     contextTree = removeRoleKeywords(contextTree)
 
-    // Compare original and transformed AST
+    // Uncomment to compare original and transformed AST
     //    comp(ctx.body, contextTree)
 
-    // Return transformed context
-    c.Expr[Any](ClassDef(ctxModifiers, ctxClassName, ctxTypeDefs, Template(Nil, emptyValDef, contextTree)))
+    // Return transformed context (as class or object)
+    if (ctxName.isTypeName)
+      c.Expr[Any](ClassDef(ctxModifiers, ctxName.toTypeName, ctxTypeDefs, Template(Nil, emptyValDef, contextTree)))
+    else
+      c.Expr[Any](ModuleDef(ctxModifiers, ctxName.toTermName, Template(Nil, emptyValDef, contextTree)))
   }
 }
 
