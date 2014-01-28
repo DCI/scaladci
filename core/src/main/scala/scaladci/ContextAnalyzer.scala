@@ -7,31 +7,29 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
   val ctxTemplate: Tree
 
 
-  // Reject using role as a template in a Context class
-  class abortRoleTemplate(tree0: Tree) extends Transformer {
+  // Validate and organize Context AST
+
+  abortRoleTemplate(ctxTemplate).transform(ctxTemplate)
+  val body    = ctxTemplate.asInstanceOf[TemplateApi].body
+  val objects = body.collect { case ValDef(_, name, _, _) => name}
+  val roles   = roleDefinitions(body)
+
+  case class abortRoleTemplate(tree0: Tree) extends Transformer {
     override def transform(tree: Tree): Tree = tree match {
       case Template(_, ValDef(_, TermName("role"), _, _), _) => abortRoleUse(tree0, "as a template name")
       case _                                                 => super.transform(tree)
     }
   }
-  new abortRoleTemplate(ctxTemplate).transform(ctxTemplate)
-
-  val body    = ctxTemplate.asInstanceOf[TemplateApi].body
-  val objects = body.collect { case ValDef(_, name, _, _) => name}
-  val roles   = roleDefinitions(body)
 
   def isRoleMethod(roleName: String, methodName: String) =
     !roles.isEmpty && roles.contains(roleName) && roles(roleName).contains(methodName)
-
 
   def abortRoleUse(tree: Tree, msg: String, i: Int = 0) = {
     abort(s"Using `role` keyword $msg is not allowed.\nCODE: $tree\nAST: ${showRaw(tree)}", i)
   }
 
-  // Abort role definition in a tree
   case class noRoleKW(tree0: Tree) extends Transformer {
     def err(msg: String, i: Int = 0) = abortRoleUse(tree0, msg, i)
-
     override def transform(tree: Tree): Tree = tree match {
       case Apply(Select(Ident(TermName("role")), _), _) /* role Foo {...} */ => err("on a sub level of the Context", 1)
       case Apply(Ident(TermName("role")), _) /*            role(Foo)      */ => err("on a sub level of the Context", 2)
@@ -52,9 +50,6 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
       case _                                                                 => super.transform(tree)
     }
   }
-//  object noRoleKW {
-//    def apply(tree: Tree) = new noRoleKW(tree).transform(tree)
-//  }
 
   def roleDefinitions(ctxBody: List[Tree]) = {
 
