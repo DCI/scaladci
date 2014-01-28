@@ -1,77 +1,41 @@
-//package scaladci
-//package syntax
-//
-//import org.specs2.mutable._
-//
-//class RoleMethod extends Specification {
-//
-//  case class Data(number: Int)
-//
-//  "Can" >> {
-//
-//    "Have side effects" >> {
-//
-//      @context
-//      case class Context(Foo: Data) {
-//        def trigger = Foo.roleMethod
-//
-//        role Foo {
-//          def roleMethod() {
-//            println("fire missil")
-//          }
-//        }
-//      }
-//      Context(Data(7)).trigger
-//      ok // Can fire missil
-//    }
-//
-//
-//    "Have side effect" >> {
-//
-//      @context
-//      case class Context(Foo: Data) {
-//        def trigger = Foo.roleMethod
-//
-//        role Foo {
-//          def roleMethod() = {
-//
-//          }
-//        }
-//      }
-//      Context(Data(7)).trigger
-//      ok // Can call trigger to print "side effect"
-//    }
-//
-//  }
-//
-//
-//  "Using `role` as method" >> {
+package scaladci
+package syntax
+import util._
+
+class RoleMethod extends DCIspecification {
+
+  // A Role method ...
+
+  "Can have side effects" >> {
+
+    @context
+    case class Context(Foo: Data) {
+      def trigger = Foo.roleMethod
+
+      role Foo {
+        def roleMethod() {
+          println("fire missil")
+        }
+      }
+    }
+    Context(Data(7)).trigger
+    ok // Can fire missil
+  }
+
+
+//  "Have side effect" >> {
 //
 //    @context
-//    class Context(Bar: Data) {
+//    case class Context(Foo: Data) {
+//      def trigger = Foo.roleMethod
 //
+//      role Foo {
+//        def roleMethod() = {
 //
-//      role(Bar)
-//
-//      role(Bar)()
-//
-//      role(Bar) {}
-//
-//      role(Bar) {
-//        def m = 1
+//        }
 //      }
-//
 //    }
-//
-//    success
+//    Context(Data(7)).trigger
+//    ok // Can call trigger to print "side effect"
 //  }
-//
-//  "Can't define" >> {
-//
-//    "val" >> {
-//
-//      success
-//    }
-//
-//  }
-//}
+}

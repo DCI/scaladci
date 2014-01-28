@@ -190,14 +190,14 @@ object ContextTransformer {
             x(31, roleDef, roleName)
             abort(s"A role definition is not allowed to return a value." +
               s"\nPlease remove the following return code from the '$roleName' role:" +
-              s"\n$returnValue\n------------\n${showRaw(roleDef)}\n------------\n$roleDef")
+              s"\nCODE: $returnValue\n------------\nAST: ${showRaw(roleDef)}\n------------\n$roleDef")
             EmptyTree
 
           case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(_, returnValue))) =>
             x(32, roleDef, roleName)
             abort(s"A role definition is not allowed to return a value." +
               s"\nPlease remove the following return code from the `${roleName.toString}` role definition body:" +
-              s"\n$returnValue\n------------\n${showRaw(roleDef)}\n------------\n$roleDef")
+              s"\nCODE: $returnValue\n------------\nAST: ${showRaw(roleDef)}\n------------\n$roleDef")
             EmptyTree
 
           // Transform context tree recursively

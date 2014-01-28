@@ -1,90 +1,24 @@
 package scaladci
 package syntax
-import util.expectCompileError
+import util._
 
-import org.specs2.mutable._
+class RoleAsMethod extends DCIspecification {
 
-class RoleAsMethod extends Specification {
+  // `role` as method ...
 
-  case class Data(i: Int)
+  "Can define implemented Roles" >> {
+
+    @context class Context(Foo: Data) {
+      role(Foo) {
+        def roleMethod = 1
+      }
+    }
+
+    success
+  }
 
 
-  "Methodless Roles" >> {
-
-//    @context class Context1(Foo: Data) {
-      //      role =>
-      //      val x = 7
-      //      val y = role.x
-      //      val role = 9
-
-      //      case class role {}
-
-      //            val value = role
-
-      //      val role = 8
-      //      class role {}
-      //       trait role {}
-      //      type role = String
-      //      object role {}
-      //      val x = this.role
-
-      //      //      role(null)
-      //      //      role()
-      //      role(Foo)
-      //      role(Foo)()
-      //      role(Foo) {}
-      //
-      //      val x = 1
-      //      role.Foo
-      //
-      //      // noRoleDefinitions kicking in:
-      //      //      role(role Foo)
-      //      //      role(role Foo)()
-      //      //      role(role Foo) {}
-      //
-      //      // nested role definitions not allowed
-      ////      def hej() {
-      ////        role Foo {}
-      ////      }
-      //      def hey() {
-      ////          role Foo {}
-      //        def you() {
-      //          val role = 7
-      //        }
-      //      }
-      //
-      //
-      //      val role = 1
-      //
-      //      //
-      //      role(Foo)(role(Foo))
-      //      role(Foo) {role(Foo)}
-      //      role(Foo) {
-      //        role Foo()
-      //      }
-      //
-      //
-      //      val z = 1
-      //
-      //
-      //      role Foo {role Foo {}}
-      //      role Foo {
-      //        role Foo {
-      //
-      //        }
-      //      }
-      //
-      //      role Foo
-      //        role Foo {}
-      //
-      //      role Foo
-      //        role Foo()
-      //
-      //      role(Foo) Foo
-      //
-      //      role(Foo) = Foo
-//
-//    }
+  "Can define methodless Roles" >> {
 
     @context class Context2(Foo: Data) {
       role(Foo)()
@@ -97,19 +31,7 @@ class RoleAsMethod extends Specification {
   }
 
 
-  "Implemented Roles" >> {
-
-    @context class Context(Foo: Data) {
-      role(Foo) {
-        def roleMethod = 1
-      }
-    }
-
-    success
-  }
-
-
-  "Missing Role name" >> {
+  "Needs a Role name" >> {
 
     expectCompileError(
       """

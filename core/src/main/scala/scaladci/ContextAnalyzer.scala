@@ -55,7 +55,7 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
 
     def roleMethods(roleName: Name, t: List[Tree]): List[String] = t collect {
       case DefDef(_, meth, _, _, _, _) if meth != nme.CONSTRUCTOR => meth.toString
-      case tree                                                   => abort(s"Roles can only define methods. Found invalid code in the `$roleName` role:\n $tree")
+      case tree                                                   => abort(s"Roles are only allowed to define methods.\nPlease remove the following code from `$roleName`:\nCODE: $tree")
     }
 
     val ctxObjects = ctxBody collect {
