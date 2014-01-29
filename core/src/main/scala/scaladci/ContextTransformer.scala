@@ -81,7 +81,7 @@ object ContextTransformer {
 
         // Disallow `this` in role method body
         case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
-          abort("`this` in a role method points to the Context and is not allowed in this DCI Context.\n" +
+          abort("`this` in a role method points to the Context and is not allowed in a DCI Context.\n" +
             "Please access Context members directly if needed or use `self` to reference the Role Player.")
           EmptyTree
 

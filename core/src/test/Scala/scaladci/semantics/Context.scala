@@ -46,4 +46,17 @@ class Context extends DCIspecification {
 
     success
   }
+
+  "Can instantiate a nested Context" >> {
+
+    // Todo
+    ok
+  }
+
+
+  "Only one DCI Context can be active at a time" >> {
+
+    // Todo
+    ok
+  }
 }

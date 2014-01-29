@@ -44,7 +44,7 @@ class RoleReference extends DCIspecification {
 
     // According to Scala semantics, `this` in the example below is pointing to the
     // Context instance. It would be confusing to let it point to the Role Player and
-    // since we can access the Context members anyway without it we disallow using it
+    // since we can access the Context members anyway without it, we disallow using it
     // inside a DCI context:
 
     expectCompileError(
@@ -59,7 +59,7 @@ class RoleReference extends DCIspecification {
         }
       """,
       """
-        |`this` in a role method points to the Context and is not allowed in this DCI Context.
+        |`this` in a role method points to the Context and is not allowed in a DCI Context.
         |Please access Context members directly if needed or use `self` to reference the Role Player.
       """)
 

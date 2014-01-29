@@ -6,6 +6,21 @@ class RoleBody extends DCIspecification {
 
   // A Role body ...
 
+  "Can define role method(s)" >> {
+
+    @context
+    case class Context(Foo: Data) {
+      def trigger = Foo.bar
+
+      role Foo {
+        def bar = 2 * baz
+        def baz = 3 * buz
+        def buz = 4 * Foo.i
+      }
+    }
+    Context(Data(5)).trigger === 2 * 3 * 4 * 5
+  }
+
 
   "Cannot be assigned to a Role definition" >> {
 
@@ -45,20 +60,6 @@ class RoleBody extends DCIspecification {
     success
   }
 
-  "Can only define role methods" >> {
-
-    @context
-    case class Context(Foo: Data) {
-      def trigger = Foo.bar
-
-      role Foo {
-        def bar = 2 * baz
-        def baz = 3 * buz
-        def buz = 4 * Foo.i
-      }
-    }
-    Context(Data(5)).trigger === 2 * 3 * 4 * 5
-  }
 
   "Cannot define state" >> {
 
@@ -94,6 +95,7 @@ class RoleBody extends DCIspecification {
 
     success
   }
+
 
   "Cannot define types aliases (??)" >> {
 
@@ -193,6 +195,7 @@ class RoleBody extends DCIspecification {
 
     success
   }
+
 
   "Cannot define a nested role" >> {
 

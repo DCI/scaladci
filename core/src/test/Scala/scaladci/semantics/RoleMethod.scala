@@ -73,5 +73,28 @@ class RoleMethod extends DCIspecification {
     }
 
     Context3.execute === "ab"
+
+
+
+    @context
+    case object Context4 {
+      val a = Inst()
+      val b = Inst()
+
+      def execute = a.foo
+
+      role a {
+        def foo = {
+          b.bar(a.toString())
+        }
+
+      }
+
+      role b {
+        def bar(str: String) = b.foo(str)
+      }
+    }
+
+    Context3.execute === "ab"
   }
 }
