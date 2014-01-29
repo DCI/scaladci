@@ -6,7 +6,7 @@ class RolePlayerLifetime extends DCIspecification {
 
   // Role Player lifetime ...
 
-  "Is limited to the Context" >> {
+  "Is limited to Context execution" >> {
 
     @context
     case class Context(Foo: Data) {

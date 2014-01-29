@@ -2,14 +2,15 @@ package scaladci
 package semantics
 import util._
 
-class RolePlayer extends DCIspecification {
+class ObjectInstantiation extends DCIspecification {
 
-  // An object can play a Role when ...
+  // Object instantiation ...
 
-  "Object is passed to Context" >> {
+  "In environment (passed to Context)" >> {
 
     @context
     case class Context(Foo: Data) {
+
       def trigger = Foo.foo
 
       role Foo {
@@ -21,11 +22,14 @@ class RolePlayer extends DCIspecification {
     Context(obj).trigger === 42 * 2
   }
 
-  "Object is instantiated in Context" >> {
+
+  "In Context" >> {
 
     @context
     case class Context(i: Int) {
+
       val Foo = Data(i)
+
       def trigger = Foo.foo
 
       role Foo {
@@ -36,12 +40,14 @@ class RolePlayer extends DCIspecification {
     Context(42).trigger === 42 * 2
   }
 
-  "Object is a reference to another object/RolePlayer in Context" >> {
+
+  "As new variable referencing already instantiated object/RolePlayer" >> {
 
     @context
     case class Context(Foo: Data) {
 
       val Bar = Foo
+
       def trigger = Bar.bar
 
       role Bar {

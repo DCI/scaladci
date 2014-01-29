@@ -82,12 +82,6 @@ trait MacroHelper[C <: MacroContext] {
     }
   }
 
-
-  type W[T] = c0.WeakTypeTag[T]
-  type PFT[A] = PartialFunction[Tree, A]
-  type PF = PartialFunction[Tree, Tree]
-  type ToExpr[A] = PFT[Expr[A]]
-
   object Name {
     def apply(s: String) = newTermName(s)
     def unapply(name: Name): Option[String] = Some(name.decoded)

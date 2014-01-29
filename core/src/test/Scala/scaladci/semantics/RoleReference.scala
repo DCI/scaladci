@@ -6,7 +6,7 @@ class RoleReference extends DCIspecification {
 
   // Role reference ...
 
-  "Can be Role name" >> {
+  "Can be a Role name" >> {
 
     @context
     case class Context(Foo: Data) {

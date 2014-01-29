@@ -4,7 +4,7 @@ import util._
 
 class RoleBody extends DCIspecification {
 
-  // A Role body ...
+  // Role body ...
 
   "Can define role method(s)" >> {
 
@@ -115,6 +115,7 @@ class RoleBody extends DCIspecification {
       """)
     success
   }
+
 
   "Cannot define other types" >> {
 

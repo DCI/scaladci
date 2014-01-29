@@ -2,9 +2,9 @@ package scaladci
 package syntax
 import util._
 
-class ContextClass extends DCIspecification {
+class DCIcontext extends DCIspecification {
 
-  // A Context class ...
+  // DCI Context ...
 
   "Can only be a class, case class or object" >> {
 
@@ -52,6 +52,7 @@ class ContextClass extends DCIspecification {
     success
   }
 
+
   "Can be an empty stub" >> {
 
     @context
@@ -59,6 +60,7 @@ class ContextClass extends DCIspecification {
 
     success
   }
+
 
   "Cannot be named `role`" >> {
 

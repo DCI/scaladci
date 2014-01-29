@@ -4,7 +4,7 @@ import util._
 
 class Context extends DCIspecification {
 
-  // A Context ...
+  // Context ...
 
   "Cannot define a nested DCI Context" >> {
 
@@ -47,16 +47,28 @@ class Context extends DCIspecification {
     success
   }
 
-  "Can instantiate a nested Context" >> {
+
+  "Todo: Can instantiate a nested Context" >> {
 
     // Todo
     ok
   }
 
 
-  "Only one DCI Context can be active at a time" >> {
+  "Todo: Can play a Role in another Context" >> {
 
     // Todo
+    ok
+  }
+
+
+
+  // "Only one DCI Context can be active at a time"
+  // Isn't that only possible with parallel execution ??
+
+  "Todo: Cannot be active at the same time as another Context" >> {
+
+    // Todo ??
     ok
   }
 }

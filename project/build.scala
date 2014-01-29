@@ -13,8 +13,8 @@ object build extends Build with BuildSettings {
 trait BuildSettings extends Publishing {
 
   lazy val shared = Defaults.defaultSettings ++ publishSettings ++ Seq(
-    organization := "com.marcgrue",
-    version := "0.5.0-SNAPSHOT",
+    organization := "org.scaladci",
+    version := "0.5.0",
     scalaVersion := "2.10.3",
     scalacOptions := Seq("-unchecked", "-deprecation", "-feature"),
     resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snapshots")),

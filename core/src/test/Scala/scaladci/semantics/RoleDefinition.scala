@@ -4,7 +4,7 @@ import util._
 
 class RoleDefinition extends DCIspecification {
 
-  // A Role definition ...
+  // Role definition ...
 
   "Can only be at top level in Context" >> {
 

@@ -6,7 +6,7 @@ class ContextAnnotation extends DCIspecification {
 
   // Context annotation ...
 
-  "@context is standard (??)" >> {
+  "@context is standard (?)" >> {
 
     @context
     class Context(Foo: Data) {
@@ -34,7 +34,7 @@ class ContextAnnotation extends DCIspecification {
   }
 
 
-  "`@use case class MyUseCase` is an elegant reference to \"Use Case\"" >> {
+  "@use with case class could be meaningful for @use cases" >> {
 
     @use case class MyUseCase(Foo: Data) {
       def execute = Foo.value

@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Test Results &mdash; Specs2 in 'semantics'</title>
+<title>Test Results &mdash; Specs2 in 'syntax'</title>
 <style type="text/css">
           html {
             height: 100%
@@ -572,8 +572,8 @@ jQuery.cookie = function(name, value, options) {
 <body>
 <div id="container">
 <div id="header">
-<div class="time">130 ms</div>
-<h1>Specs2 in 'semantics': <strong><span class="total">19 total, </span><span class="passed">19 passed</span></strong>
+<div class="time">75 ms</div>
+<h1>Specs2 in 'syntax': <strong><span class="total">16 total, </span><span class="passed">16 passed</span></strong>
 </h1>
 <div id="treecontrol">
 <ul>
@@ -591,152 +591,109 @@ jQuery.cookie = function(name, value, options) {
 <ul id="tree">
 <li xmlns="" class="level top open">
 <span><em class="time">
-<div class="time">111 ms</div>
-</em>RolePlayer</span>
+<div class="time">22 ms</div>
+</em>DCIcontext</span>
 <ul>
 <li class="level test">
 <span><em class="time">
-<div class="time">37 ms</div>
-</em><em class="status">passed</em>Object is passed to Context</span>
+<div class="time">8 ms</div>
+</em><em class="status">passed</em>Can only be a class, case class or object</span>
 </li>
 <li class="level test">
 <span><em class="time">
-<div class="time">37 ms</div>
-</em><em class="status">passed</em>Object is instantiated in Context</span>
+<div class="time">7 ms</div>
+</em><em class="status">passed</em>Can be an empty stub</span>
 </li>
 <li class="level test">
 <span><em class="time">
-<div class="time">37 ms</div>
-</em><em class="status">passed</em>Object is a reference to another object/RolePlayer in Context</span>
+<div class="time">7 ms</div>
+</em><em class="status">passed</em>Cannot be named `role`</span>
 </li>
 </ul>
 </li>
 <li class="level top open">
 <span><em class="time">
-<div class="time">2 ms</div>
-</em>RoleBody</span>
+<div class="time">51 ms</div>
+</em>ContextAnnotation</span>
 <ul>
 <li class="level test">
 <span><em class="time">
-<div class="time">0 ms</div>
-</em><em class="status">passed</em>Cannot be assigned to a Role definition</span>
+<div class="time">17 ms</div>
+</em><em class="status">passed</em>@context is standard (?)</span>
 </li>
 <li class="level test">
 <span><em class="time">
-<div class="time">2 ms</div>
-</em><em class="status">passed</em>Can only define role methods</span>
+<div class="time">17 ms</div>
+</em><em class="status">passed</em>@dci could be meaningful too</span>
 </li>
 <li class="level test">
 <span><em class="time">
-<div class="time">0 ms</div>
-</em><em class="status">passed</em>Cannot define state</span>
-</li>
-<li class="level test">
-<span><em class="time">
-<div class="time">0 ms</div>
-</em><em class="status">passed</em>Cannot define types aliases (??)</span>
-</li>
-<li class="level test">
-<span><em class="time">
-<div class="time">0 ms</div>
-</em><em class="status">passed</em>Cannot define other types</span>
-</li>
-<li class="level test">
-<span><em class="time">
-<div class="time">0 ms</div>
-</em><em class="status">passed</em>Cannot define a nested role</span>
+<div class="time">17 ms</div>
+</em><em class="status">passed</em>@use with case class could be meaningful for @use cases</span>
 </li>
 </ul>
 </li>
 <li class="level top open">
 <span><em class="time">
-<div class="time">0 ms</div>
-</em>Context</span>
+<div class="time">1 ms</div>
+</em>RoleAsKeyword</span>
 <ul>
 <li class="level test">
 <span><em class="time">
 <div class="time">0 ms</div>
-</em><em class="status">passed</em>Cannot define a nested DCI Context</span>
+</em><em class="status">passed</em>Can define implemented Roles</span>
+</li>
+<li class="level test">
+<span><em class="time">
+<div class="time">0 ms</div>
+</em><em class="status">passed</em>Can define methodless Roles</span>
+</li>
+<li class="level test">
+<span><em class="time">
+<div class="time">1 ms</div>
+</em><em class="status">passed</em>Can only define Roles</span>
+</li>
+<li class="level test">
+<span><em class="time">
+<div class="time">0 ms</div>
+</em><em class="status">passed</em>Needs a Role name</span>
+</li>
+<li class="level test">
+<span><em class="time">
+<div class="time">0 ms</div>
+</em><em class="status">passed</em>Needs body to avoid postfix clashes</span>
 </li>
 </ul>
 </li>
 <li class="level top open">
 <span><em class="time">
-<div class="time">0 ms</div>
-</em>RoleDefinition</span>
+<div class="time">1 ms</div>
+</em>RoleAsMethod</span>
 <ul>
 <li class="level test">
 <span><em class="time">
 <div class="time">0 ms</div>
-</em><em class="status">passed</em>Can only be at top level in Context</span>
+</em><em class="status">passed</em>Can define implemented Roles</span>
 </li>
 <li class="level test">
 <span><em class="time">
 <div class="time">0 ms</div>
-</em><em class="status">passed</em>Cannot be inside another Role definition</span>
+</em><em class="status">passed</em>Can define methodless Roles</span>
 </li>
 <li class="level test">
 <span><em class="time">
 <div class="time">0 ms</div>
-</em><em class="status">passed</em>Cannot be defined twice (defining same Role name twice)</span>
-</li>
-</ul>
-</li>
-<li class="level top open">
-<span><em class="time">
-<div class="time">5 ms</div>
-</em>ObjectIdentity</span>
-<ul>
-<li class="level test">
-<span><em class="time">
-<div class="time">5 ms</div>
-</em><em class="status">passed</em>Is same when playing a Role</span>
-</li>
-</ul>
-</li>
-<li class="level top open">
-<span><em class="time">
-<div class="time">2 ms</div>
-</em>RolePlayerLifetime</span>
-<ul>
-<li class="level test">
-<span><em class="time">
-<div class="time">2 ms</div>
-</em><em class="status">passed</em>Is limited to the Context</span>
-</li>
-</ul>
-</li>
-<li class="level top open">
-<span><em class="time">
-<div class="time">5 ms</div>
-</em>RoleMethod</span>
-<ul>
-<li class="level test">
-<span><em class="time">
-<div class="time">5 ms</div>
-</em><em class="status">passed</em>Takes precedence over instance method</span>
-</li>
-</ul>
-</li>
-<li class="level top open">
-<span><em class="time">
-<div class="time">5 ms</div>
-</em>RoleReference</span>
-<ul>
-<li class="level test">
-<span><em class="time">
-<div class="time">2 ms</div>
-</em><em class="status">passed</em>Can be Role name</span>
-</li>
-<li class="level test">
-<span><em class="time">
-<div class="time">3 ms</div>
-</em><em class="status">passed</em>Can be `self`</span>
+</em><em class="status">passed</em>Needs a Role name</span>
 </li>
 <li class="level test">
 <span><em class="time">
 <div class="time">0 ms</div>
-</em><em class="status">passed</em>Cannot be `this` (not Scala ideomatic)</span>
+</em><em class="status">passed</em>Needs a Role body</span>
+</li>
+<li class="level test">
+<span><em class="time">
+<div class="time">1 ms</div>
+</em><em class="status">passed</em>Cannot use constant as Role name (?!)</span>
 </li>
 </ul>
 </li>
@@ -744,7 +701,7 @@ jQuery.cookie = function(name, value, options) {
 </div>
 </div>
 <div id="footer">
-<p>Generated by IntelliJ IDEA on 1/29/14 12:20 AM</p>
+<p>Generated by IntelliJ IDEA on 1/29/14 9:23 PM</p>
 </div>
 </body>
 </html>

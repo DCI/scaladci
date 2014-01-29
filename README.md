@@ -1,8 +1,9 @@
 # Scala DCI
 
-###Let runtime objects play Roles in a DCI Context!
+###Enabling true object oriented programming in Scala
 
-The [Data Context Interaction (DCI)](http://en.wikipedia.org/wiki/Data,_context_and_interaction) paradigm by Trygve Reenskaug and James Coplien embodies true object-orientation where
+The [Data Context Interaction (DCI)](http://en.wikipedia.org/wiki/Data,_context_and_interaction) 
+paradigm by Trygve Reenskaug and James Coplien embodies true object-orientation where
 runtime Interactions between a network of objects in a particular Context 
 is understood _and_ coded as first class citizens.
 
@@ -13,19 +14,16 @@ case class Account(name: String, var balance: Int) {
   def decreaseBalance(amount: Int) { balance -= amount }
 }
 ```
-This is what we in DCI sometimes call a "dumb" data class. It only "knows" about its own data and how to manipulate that. 
-The concept of a transfer between two accounts is outside its responsibilities and we delegate this to a Context - the MoneyTransfer context class. In this way we can keep the Account class very slim and avoid that it gradually takes on more and more responsibilities for each use case it participates in.
+This is a primitive data class only knowing about its own data and how to manipulate that. 
+The concept of a transfer between two accounts we can leave outside its responsibilities and instead 
+delegate to a "Context" - the MoneyTransfer Context class. In this way we can keep the Account class 
+very slim and avoid that it gradually takes on more and more responsibilities for each use case 
+it participates in.
 
-From a users point of view we might think of a money transfer as 
-
-- "Move money from one account to another"
-
-and after some more thought specify it further: 
-
-- "Withdraw amount from a source account and deposit the amount in a destination account"
-
-That could be our "Mental Model" of a money transfer. Interacting "concepts" like our "Source" and "Destination" accounts of our mental model we call "Roles" in DCI and we can define them and what they do to accomplish the money transfer in a DCI Context:
-
+Our Mental Model of a money transfer could be "Withdraw amount from a source account and deposit the 
+amount in a destination account". Interacting concepts like our "Source" 
+and "Destination" accounts we call "Roles" in DCI. And we can define how they can interact in our 
+Context to accomplish a money transfer:
 ```Scala
 @context
 class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
@@ -48,12 +46,15 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
 ```
 
 We want our source code to map as closely to our mental model as possible so that we can confidently and easily
-overview and reason about _how the objects will interact at runtime_! We want to expect no surprises at runtime. With DCI we have all runtime interactions right there! No need to look through endless convoluted abstractions, tiers, polymorphism etc to answer the reasonable question _where is it actually happening, goddammit?!_
+overview and reason about _how the objects will interact at runtime_! We want to expect no surprises at runtime. 
+With DCI we have all runtime interactions right there! No need to look through endless convoluted abstractions, 
+tiers, polymorphism etc to answer the reasonable question _where is it actually happening, goddammit?!_
 
 At compile time, our @context macro annotation transforms the abstract syntax tree (AST) of our code to enable our
 _runtime data objects_ to "have" those extra Role Methods. Well, I'm half lying to you; the 
 objects won't "get new methods". Instead we call Role-name prefixed Role methods that are
-lifted into Context scope which accomplishes what we intended in our source code. Our code gets transformed as though we had written this:
+lifted into Context scope which accomplishes what we intended in our source code. Our code gets transformed as 
+though we had written this:
 
 ```Scala
 class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
@@ -109,10 +110,8 @@ which will now turn into
 ```
 Role methods will always take precedence over instance methods when they have the same signature.
 
-## `self` and `this` references to Role Players
-As an alternative to using the Role name to reference a Role Player we can also use `self` or `this`.
-
-If we use `self` our Role definitions would look like this:
+## `self` reference to a Role Player
+As an alternative to using the Role name to reference a Role Player we can also use `self`:
 ```Scala
   role Source {
     def withdraw {
@@ -127,26 +126,7 @@ If we use `self` our Role definitions would look like this:
     }
   }
 ```
-
-If we choose, we can also use `this` as a reference inside Role methods to refer to the Role Player.
-This is not Scala-idiomatic though since `this` would normally point to the Context instance!
-We have allowed this special DCI-idiomatic meaning of `this` since we want to be able to think of
-"this role" (or "this Role Player") while we define our Role methods:
-```Scala
-  role Source {
-    def withdraw {
-      this.decreaseBalance(amount)  
-      Destination.deposit
-    }
-  }
-
-  role Destination {
-    def deposit {
-      this.increaseBalance(amount)
-    }
-  }
-```
-Using `self` or `this` doesn't change how Role methods take precedence over instance methods.
+Using `self` doesn't change how Role methods take precedence over instance methods.
 
 
 ## Multiple roles
@@ -182,7 +162,7 @@ class MyContext(SomeRole: MyData) {
 ```
 As you see in line 3, OtherRole is simply a reference pointing to the MyData instance (named SomeRole). 
 
-Inside each role definition we can still use `self` and `this`.
+Inside each role definition we can still use `self`.
 
 We can add as many references/role definitions as we want. This is a way to 
 allow different Roles of a Use Case each to have their own meaningful namespace for defining their 
@@ -272,23 +252,25 @@ which is not the intention and result after source code transformation.
 
 ## Scala DCI demo application
 
-In the [Scala DCI Demo App](https://github.com/DCI/scaladci/tree/master/demo) you can see an example of how to create a DCI project.
+In the [Scala DCI Demo App](https://github.com/DCI/scaladci/tree/master/demo) you can see an example of 
+how to create a DCI project.
 
 
 ## Using Scala DCI in your project
 
-ScalaDCI is available for Scala 2.10.3 at [Sonatype](https://oss.sonatype.org/index.html#nexus-search;quick%7Eshapeless). To start coding with DCI in Scala add the following to your SBT build file:
+ScalaDCI is available for Scala 2.10.3 at [Sonatype](https://oss.sonatype.org/index.html#nexus-search;quick%7Eshapeless). 
+To start coding with DCI in Scala add the following to your SBT build file:
 
     libraryDependencies ++= Seq(
-      "com.marcgrue" %% "scaladci" % "0.4.1"
+      "org.scaladci" %% "scaladci" % "0.5.0"
     ),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0-M2" cross CrossVersion.full)
 
 
 ## Building Scala DCI
 - Scala DCI is built with SBT 0.13.1. 
-- Latest release is version 0.4.1
-- Ongoing development of 0.5.0-SNAPSHOT continues in the master branch
+- Latest release is version 0.5.0
+- Ongoing development of 0.6.0-SNAPSHOT continues in the master branch
 - Pull requests and comments are welcome! :-)
 
 To build Scala DCI on your local machine:
