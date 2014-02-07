@@ -31,7 +31,7 @@ And you're ready to instantiate the Context and let the use case roll...
 You can use this demo app as a template for your own project and just add more dependencies and content as you go. In the [SBT build file](https://github.com/DCI/scaladci/blob/master/demo/project/build.scala) you can see what the minimum requirement is to enable DCI in your own app. It's basically those two lines:
 
 ```scala
-"com.marcgrue" %% "scaladci" % "0.4.1"
+"org.scaladci" % "scaladci_2.11.0-M8" % "0.5.0"
 ...
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0-M2" cross CrossVersion.full)
 ```
