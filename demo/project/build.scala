@@ -8,7 +8,7 @@ object build extends Build {
   val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.yourcompany",
     version := "0.5.0",
-    scalaVersion := "2.10.3",
+    scalaVersion := "2.11.0-M8",
     scalacOptions := Seq("-unchecked", "-deprecation"),
     resolvers ++= Seq(Resolver.sonatypeRepo("releases")),
     libraryDependencies ++= Seq(
