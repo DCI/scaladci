@@ -1,5 +1,5 @@
 package scaladci
-import scala.reflect.macros.{Context => MacroContext}
+import scala.reflect.macros.whitebox.{Context => MacroContext}
 import scaladci.util.MacroHelper
 import scala._
 import scala.Some

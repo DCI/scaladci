@@ -1,14 +1,14 @@
 package scaladci
 package util
 
-import scala.reflect.macros.{Context => MacroContext}
+import scala.reflect.macros.whitebox.{Context => MacroContext}
 
 trait MacroHelper[C <: MacroContext] {
   val c0: C
   import c0.universe._
 
   def expr(tree: Tree) = {
-    val typeCheckedTree = c0.typeCheck(tree)
+    val typeCheckedTree = c0.typecheck(tree)
     c0.Expr(typeCheckedTree)(c0.WeakTypeTag(typeCheckedTree.tpe))
   }
 
@@ -68,6 +68,7 @@ trait MacroHelper[C <: MacroContext] {
     abort(msg + t)
     t
   }
+
   case class debug(clazz: String, threshold: Int, max: Int = 9999) {
     def apply(id: Int, params: Any*): Unit = {
       if (id >= threshold && id <= max) {
@@ -80,20 +81,6 @@ trait MacroHelper[C <: MacroContext] {
         c0.abort(NoPosition, x)
       }
     }
-  }
-
-  object Name {
-    def apply(s: String) = newTermName(s)
-    def unapply(name: Name): Option[String] = Some(name.decoded)
-  }
-
-  object TermName {
-    def apply(s: String) = newTermName(s)
-    def unapply(name: TermName): Option[String] = Some(name.toString)
-  }
-  object TypeName {
-    def apply(s: String) = newTypeName(s)
-    def unapply(name: TypeName): Option[String] = Some(name.toString)
   }
 
   implicit class RichModifiersApi(mods: ModifiersApi) {
