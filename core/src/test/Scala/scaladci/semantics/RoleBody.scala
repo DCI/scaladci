@@ -144,7 +144,7 @@ class RoleBody extends DCIspecification {
         @context
         class Context(Foo: Int) {
           role Foo {
-            case class NoCaseClass  // <-- no class definitions in Roles!
+            case class NoCaseClass()  // <-- no class definitions in Roles!
           }
         }
       """,
