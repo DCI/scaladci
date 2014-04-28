@@ -1,7 +1,7 @@
 package scaladci
 
 import scala.language.experimental.macros
-import scala.reflect.macros.{Context => MacroContext}
+import scala.reflect.macros.whitebox.{Context => MacroContext}
 import scala.annotation.StaticAnnotation
 import scaladci.util.MacroHelper
 
@@ -9,18 +9,18 @@ import scaladci.util.MacroHelper
 
 // `@context class Context` ...
 class context extends StaticAnnotation {
-  def macroTransform(annottees: Any*) = macro ContextTransformer.transform
+  def macroTransform(annottees: Any*): Any = macro ContextTransformer.transform
 }
 
 // `@dci object Context` ...
 class dci extends StaticAnnotation {
-  def macroTransform(annottees: Any*) = macro ContextTransformer.transform
+  def macroTransform(annottees: Any*): Any = macro ContextTransformer.transform
 }
 
 // Imitating "use case" with a case class Context:
 // `@use case class Context` ...
 class use extends StaticAnnotation {
-  def macroTransform(annottees: Any*) = macro ContextTransformer.transform
+  def macroTransform(annottees: Any*): Any = macro ContextTransformer.transform
 }
 
 
@@ -37,8 +37,8 @@ object ContextTransformer {
     // Extract main building blocks of context class AST =======================================
 
     val (ctxModifiers, ctxName, ctxTypeDefs, ctxTemplate) = annottees.head.tree match {
-      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(TRAIT)    => abort("Using a trait as a DCI context is not allowed")
-      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(ABSTRACT) => abort("Using abstract class as a DCI context is not allowed")
+//      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(TRAIT)    => abort("Using a trait as a DCI context is not allowed")
+//      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(ABSTRACT) => abort("Using abstract class as a DCI context is not allowed")
       case t@ClassDef(mods, name, tpeDefs, tmpl)              => (mods, name, tpeDefs, tmpl)
       case t@ModuleDef(mods, name, tmpl)                      => (mods, name, Nil, tmpl)
       case tree                                               => abort("Only classes/case classes/objects can be transformed to DCI Contexts. Found:\n" + tree)
@@ -61,10 +61,10 @@ object ContextTransformer {
 
     def removeRoleKeywords(contextBody: List[Tree]) = contextBody.flatMap {
       case roleDef@Apply(Select(_, roleName), List(Block(roleBody, _)))             => roleBody.collect {
-        case roleMethod@DefDef(_, roleMethodName, _, _, _, _) if roleMethodName != nme.CONSTRUCTOR => roleMethod
+        case roleMethod@DefDef(_, roleMethodName, _, _, _, _) if roleMethodName != termNames.CONSTRUCTOR => roleMethod
       }
       case roleDef@Apply(Apply(_, List(Ident(roleName))), List(Block(roleBody, _))) => roleBody.collect {
-        case roleMethod@DefDef(_, roleMethodName, _, _, _, _) if roleMethodName != nme.CONSTRUCTOR => roleMethod
+        case roleMethod@DefDef(_, roleMethodName, _, _, _, _) if roleMethodName != termNames.CONSTRUCTOR => roleMethod
       }
       case otherContextElement                                                      => List(otherContextElement)
     }
@@ -75,12 +75,12 @@ object ContextTransformer {
         // Transform internal role method calls
         // roleMethod(..) => Role_roleMethod(..)
         case roleMethodRef@Ident(methodName) if ctx.roles(roleName).contains(methodName.toString) =>
-          val newRoleMethodRef = Ident(newTermName(roleName + "_" + methodName.toString))
+          val newRoleMethodRef = Ident(TermName(roleName + "_" + methodName.toString))
           //          comp(roleMethodRef, newRoleMethodRef)
           newRoleMethodRef
 
         // Disallow `this` in role method body
-        case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
+        case thisRoleMethodRef@Select(This(typeNames.EMPTY), TermName(methodName)) =>
           abort("`this` in a role method points to the Context and is not allowed in a DCI Context.\n" +
             "Please access Context members directly if needed or use `self` to reference the Role Player.")
           EmptyTree
@@ -88,7 +88,7 @@ object ContextTransformer {
         //        // Allow `this` in role method body
         //        case thisRoleMethodRef@Apply(Select(This(tpnme.EMPTY), methodName), List(params))
         //          if ctx.isRoleMethod(roleName, methodName.toString) =>
-        //          val newMethodRef = Apply(Ident(newTermName(roleName + "_" + methodName.toString)), List(params))
+        //          val newMethodRef = Apply(Ident(TermName(roleName + "_" + methodName.toString)), List(params))
         //          //          comp(thisRoleMethodRef, newMethodRef)
         //          newMethodRef
         //
@@ -97,14 +97,14 @@ object ContextTransformer {
         //        // this.instanceMethod => RoleName.instanceMethod
         //        // someMethod(this) => someMethod(RoleName)
         //        // possibly other uses?...
-        //        case This(tpnme.EMPTY) => Ident(newTermName(roleName))
+        //        case This(tpnme.EMPTY) => Ident(TermName(roleName))
 
 
         // self.roleMethod(params..) => RoleName_roleMethod(params..)
         // Role methods take precedence over instance methods!
         case selfMethodRef@Apply(Select(Ident(TermName("self")), methodName), List(params))
           if ctx.isRoleMethod(roleName, methodName.toString) =>
-          val newMethodRef = Apply(Ident(newTermName(roleName + "_" + methodName.toString)), List(params))
+          val newMethodRef = Apply(Ident(TermName(roleName + "_" + methodName.toString)), List(params))
           //          comp(selfMethodRef, newMethodRef)
           newMethodRef
 
@@ -113,7 +113,7 @@ object ContextTransformer {
         // self.instanceMethod => RoleName.instanceMethod
         // someMethod(self) => someMethod(RoleName)
         // possibly other uses?...
-        case Ident(TermName("self")) => Ident(newTermName(roleName))
+        case Ident(TermName("self")) => Ident(TermName(roleName))
 
         // Transform role method tree recursively
         case x => super.transform(roleMethodTree)
@@ -128,7 +128,7 @@ object ContextTransformer {
 
           // Prefix role method name
           // roleMethod => RoleName_roleMethod
-          val newRoleMethodName = newTermName(roleName + "_" + roleMethodName.toString)
+          val newRoleMethodName = TermName(roleName + "_" + roleMethodName.toString)
           //                    comp(roleMethodName, newRoleMethodName)
 
           // Transform role method body
@@ -166,7 +166,7 @@ object ContextTransformer {
           // role RoleName {...}
           case roleDef@Apply(Select(Ident(TermName("role")), roleName), body) => {
             val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(getRoleBody(body))
-            val newRoleDef = Apply(Select(Ident(newTermName("role")), roleName), List(Block(newRoleBody, Literal(Constant(())))))
+            val newRoleDef = Apply(Select(Ident(TermName("role")), roleName), List(Block(newRoleBody, Literal(Constant(())))))
             //            comp(roleDef, newRoleDef)
             newRoleDef
           }
@@ -174,7 +174,7 @@ object ContextTransformer {
           // role(RoleName) {...}
           case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(body, Literal(Constant(()))))) => {
             val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(getRoleBody(body))
-            val newRoleDef = Apply(Apply(Ident(newTermName("role")), List(Ident(roleName))), List(Block(newRoleBody, Literal(Constant(())))))
+            val newRoleDef = Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(newRoleBody, Literal(Constant(())))))
             //          comp(roleDef, newRoleDef)
             newRoleDef
           }
@@ -191,7 +191,7 @@ object ContextTransformer {
         // RoleName.roleMethod(params..) => RoleName_roleMethod(params..)
         case methodRef@Apply(Select(Ident(qualifier), methodName), List(params))
           if ctx.isRoleMethod(qualifier.toString, methodName.toString) =>
-          val newMethodRef = Apply(Ident(newTermName(qualifier.toString + "_" + methodName.toString)), List(params))
+          val newMethodRef = Apply(Ident(TermName(qualifier.toString + "_" + methodName.toString)), List(params))
           //          comp(methodRef, newMethodRef)
           newMethodRef
 
@@ -199,14 +199,14 @@ object ContextTransformer {
         // RoleName.roleMethod() => RoleName_roleMethod()
         case methodRef@Apply(Select(Ident(qualifier), methodName), List())
           if ctx.isRoleMethod(qualifier.toString, methodName.toString) =>
-          val newMethodRef = Apply(Ident(newTermName(qualifier.toString + "_" + methodName.toString)), List())
+          val newMethodRef = Apply(Ident(TermName(qualifier.toString + "_" + methodName.toString)), List())
           //          comp(methodRef, newMethodRef)
           newMethodRef
 
         // RoleName.roleMethod => RoleName_roleMethod
         case methodRef@Select(Ident(qualifier), methodName)
           if ctx.isRoleMethod(qualifier.toString, methodName.toString) =>
-          val newMethodRef = Ident(newTermName(qualifier.toString + "_" + methodName.toString))
+          val newMethodRef = Ident(TermName(qualifier.toString + "_" + methodName.toString))
           //          comp(methodRef, newMethodRef)
           newMethodRef
 
@@ -241,9 +241,9 @@ object ContextTransformer {
 
     // Return transformed context (as class or object)
     if (ctxName.isTypeName)
-      c.Expr[Any](ClassDef(ctxModifiers, ctxName.toTypeName, ctxTypeDefs, Template(Nil, emptyValDef, contextTree)))
+      c.Expr[Any](ClassDef(ctxModifiers, ctxName.toTypeName, ctxTypeDefs, Template(Nil, noSelfType, contextTree)))
     else
-      c.Expr[Any](ModuleDef(ctxModifiers, ctxName.toTermName, Template(Nil, emptyValDef, contextTree)))
+      c.Expr[Any](ModuleDef(ctxModifiers, ctxName.toTermName, Template(Nil, noSelfType, contextTree)))
   }
 }
 

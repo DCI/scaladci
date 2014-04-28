@@ -20,10 +20,6 @@ class RoleAsMethod extends DCIspecification {
 
   "Can define methodless Roles" >> {
 
-    @context class Context2(Foo: Data) {
-      role(Foo)()
-    }
-
     @context class Context3(Foo: Data) {
       role(Foo) {}
     }

@@ -1,5 +1,5 @@
 package scaladci
-import scala.reflect.macros.{Context => MacroContext}
+import scala.reflect.macros.whitebox.{Context => MacroContext}
 import scaladci.util.MacroHelper
 import scala._
 import scala.Some
@@ -55,7 +55,7 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
   def roleDefinitions(ctxBody: List[Tree]) = {
 
     def roleMethods(roleName: Name, t: List[Tree]): List[String] = t collect {
-      case DefDef(_, meth, _, _, _, _) if meth != nme.CONSTRUCTOR => meth.toString
+      case DefDef(_, meth, _, _, _, _) if meth != termNames.CONSTRUCTOR => meth.toString
       case tree                                                   => abort(
         s"Roles are only allowed to define methods.\nPlease remove the following code from `$roleName`:\nCODE: $tree")
     }
