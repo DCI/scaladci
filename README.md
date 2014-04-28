@@ -173,7 +173,7 @@ In order to have an intuitive syntax like
 
 ```scala
 role RoleName { 
-  // defining role methods...
+  // role methods...
 }
 ```
 
@@ -258,29 +258,23 @@ how to create a DCI project.
 
 ## Using Scala DCI in your project
 
-ScalaDCI is available for Scala 2.10.3 and 2.11.0-M8 at [Sonatype](https://oss.sonatype.org/index.html#nexus-search;quick%7Escaladci). 
+ScalaDCI is available for Scala 2.10.3 and 2.11.0 at [Sonatype](https://oss.sonatype.org/index.html#nexus-search;quick%7Escaladci). 
 To start coding with DCI in Scala add the following to your SBT build file if you use Scala 2.10.3:
 
     libraryDependencies ++= Seq(
       "org.scaladci" % "scaladci_2.10" % "0.5.0"
     ),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0-M2" cross CrossVersion.full)
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0" cross CrossVersion.full)
 
-and this if you use Scala 2.11.0-M8:
+and this if you use Scala 2.11.0:
 
     libraryDependencies ++= Seq(
-      "org.scaladci" % "scaladci_2.11.0-M8" % "0.5.0"
+      "org.scaladci" % "scaladci_2.11.0" % "0.5.1"
     ),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0-M2" cross CrossVersion.full)
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0" cross CrossVersion.full)
 
 
 ## Building Scala DCI
-- Scala DCI is built with SBT 0.13.1. 
-- Latest release is version 0.5.0
-- Ongoing development of 0.6.0-SNAPSHOT continues in the master branch
-- Pull requests and comments are welcome! :-)
-
-To build Scala DCI on your local machine:
 ```
 git clone https://github.com/DCI/scaladci.git
 cd scaladci
@@ -288,12 +282,11 @@ sbt
 gen-idea // (if you use IntelliJ)
 ```
 
-It's relatively easy to modify the code to run on Scala 2.11 too. I'll see if I can make some cross version...
 
 Have fun!
 
 Marc Grue<br>
-January 2014
+April 2014
 
 ### DCI resources
 Discussions - [Object-composition](https://groups.google.com/forum/?fromgroups#!forum/object-composition)<br>
@@ -304,5 +297,6 @@ Wiki - [DCI wiki](http://en.wikipedia.org/wiki/Data,_Context,_and_Interaction)
 Trygve Renskaug and James O. Coplien for inventing and developing DCI.
 
 Scala DCI solution inspired by<br>
-- Risto Välimäki's [post](https://groups.google.com/d/msg/object-composition/ulYGsCaJ0Mg/rF9wt1TV_MIJ) and
-- Rune Funch's [Marvin](http://fulloo.info/Examples/Marvin/Introduction/) DCI language (now [Maroon](http://runefs.com/2013/02/14/using-moby-to-do-injectionless-dci-in-ruby/) for Ruby).
+- Risto Välimäki's [post](https://groups.google.com/d/msg/object-composition/ulYGsCaJ0Mg/rF9wt1TV_MIJ) and<br>
+- Rune Funch's [Marvin](http://fulloo.info/Examples/Marvin/Introduction/) DCI language 
+and [Maroon](http://runefs.com/2013/02/14/using-moby-to-do-injectionless-dci-in-ruby/) for Ruby.
