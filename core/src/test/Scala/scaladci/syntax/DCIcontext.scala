@@ -6,10 +6,15 @@ class DCIcontext extends DCIspecification {
 
   // DCI Context ...
 
-  "Can only be a class, case class or object" >> {
+  "Can only be a class, abstract class, case class, trait or object" >> {
 
     @context
     class ClassContext(Foo: Data) {
+      role Foo {}
+    }
+
+    @context
+    abstract class AbstractClassContext(Foo: Data) {
       role Foo {}
     }
 
@@ -19,25 +24,17 @@ class DCIcontext extends DCIspecification {
     }
 
     @context
+    trait TraitContext {
+      val Foo = Data(42)
+      role Foo {}
+    }
+
+    @context
     object ObjectContext {
       // Objects to play a Role are instantiated inside the Context object
       val Foo = Data(42)
       role Foo {}
     }
-
-    expectCompileError(
-      """
-        @context
-        trait TraitContext
-      """,
-      "Using a trait as a DCI context is not allowed")
-
-    expectCompileError(
-      """
-        @context
-        abstract class AbstractClassContext
-      """,
-      "Using abstract class as a DCI context is not allowed")
 
     expectCompileError(
       """
