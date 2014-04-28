@@ -37,8 +37,8 @@ object ContextTransformer {
     // Extract main building blocks of context class AST =======================================
 
     val (ctxModifiers, ctxName, ctxTypeDefs, ctxTemplate) = annottees.head.tree match {
-      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(TRAIT)    => abort("Using a trait as a DCI context is not allowed")
-      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(ABSTRACT) => abort("Using abstract class as a DCI context is not allowed")
+//      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(TRAIT)    => abort("Using a trait as a DCI context is not allowed")
+//      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(ABSTRACT) => abort("Using abstract class as a DCI context is not allowed")
       case t@ClassDef(mods, name, tpeDefs, tmpl)              => (mods, name, tpeDefs, tmpl)
       case t@ModuleDef(mods, name, tmpl)                      => (mods, name, Nil, tmpl)
       case tree                                               => abort("Only classes/case classes/objects can be transformed to DCI Contexts. Found:\n" + tree)
@@ -61,10 +61,10 @@ object ContextTransformer {
 
     def removeRoleKeywords(contextBody: List[Tree]) = contextBody.flatMap {
       case roleDef@Apply(Select(_, roleName), List(Block(roleBody, _)))             => roleBody.collect {
-        case roleMethod@DefDef(_, roleMethodName, _, _, _, _) if roleMethodName != nme.CONSTRUCTOR => roleMethod
+        case roleMethod@DefDef(_, roleMethodName, _, _, _, _) if roleMethodName != termNames.CONSTRUCTOR => roleMethod
       }
       case roleDef@Apply(Apply(_, List(Ident(roleName))), List(Block(roleBody, _))) => roleBody.collect {
-        case roleMethod@DefDef(_, roleMethodName, _, _, _, _) if roleMethodName != nme.CONSTRUCTOR => roleMethod
+        case roleMethod@DefDef(_, roleMethodName, _, _, _, _) if roleMethodName != termNames.CONSTRUCTOR => roleMethod
       }
       case otherContextElement                                                      => List(otherContextElement)
     }
@@ -80,7 +80,7 @@ object ContextTransformer {
           newRoleMethodRef
 
         // Disallow `this` in role method body
-        case thisRoleMethodRef@Select(This(tpnme.EMPTY), TermName(methodName)) =>
+        case thisRoleMethodRef@Select(This(typeNames.EMPTY), TermName(methodName)) =>
           abort("`this` in a role method points to the Context and is not allowed in a DCI Context.\n" +
             "Please access Context members directly if needed or use `self` to reference the Role Player.")
           EmptyTree

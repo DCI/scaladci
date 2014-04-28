@@ -11,22 +11,17 @@ trait BuildSettings extends Publishing {
 
   lazy val shared = Defaults.defaultSettings ++ publishSettings ++ Seq(
     organization := "org.scaladci",
-    version := "0.5.0",
-    scalaVersion := "2.11.0-M8",
+    version := "0.5.1",
+    scalaVersion := "2.11.0",
     scalacOptions := Seq("-unchecked", "-deprecation", "-feature"),
     resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snapshots")),
-    libraryDependencies += "org.specs2" %% "specs2" % "2.3.7" % "test",
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0-M2" cross CrossVersion.full)
+    libraryDependencies += "org.specs2" %% "specs2" % "2.3.11" % "test",
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0" cross CrossVersion.full)
   )
 
-  lazy val _root = shared :+ (packagedArtifacts := Map.empty)
-
-  lazy val _core = shared :+ (libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value)
-
-  lazy val _examples = shared ++ Seq(
-    packagedArtifacts := Map.empty,
-    libraryDependencies += "org.jscala" % "jscala-annots_2.11.0-M7" % "0.3"
-  )
+  lazy val _root     = shared :+ (packagedArtifacts := Map.empty)
+  lazy val _core     = shared :+ (libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value)
+  lazy val _examples = shared :+ (packagedArtifacts := Map.empty)
 }
 
 trait Publishing {

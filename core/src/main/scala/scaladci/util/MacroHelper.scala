@@ -85,7 +85,7 @@ trait MacroHelper[C <: MacroContext] {
 
   implicit class RichModifiersApi(mods: ModifiersApi) {
     def hasCtxAnnotation = mods.annotations.collectFirst {
-      case Apply(Select(New(Ident(TypeName("context"))), nme.CONSTRUCTOR), _) => true
+      case Apply(Select(New(Ident(TypeName("context"))), termNames.CONSTRUCTOR), _) => true
     }.getOrElse(false)
   }
 }
