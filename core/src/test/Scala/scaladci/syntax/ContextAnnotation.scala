@@ -4,8 +4,6 @@ import util._
 
 class ContextAnnotation extends DCIspecification {
 
-  // Context annotation ...
-
   "@context is standard (?)" >> {
 
     @context

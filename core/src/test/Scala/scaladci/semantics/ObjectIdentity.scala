@@ -4,8 +4,6 @@ import util._
 
 class ObjectIdentity extends DCIspecification {
 
-  // Object identity ...
-
   "Is same when playing a Role" >> {
 
     @context

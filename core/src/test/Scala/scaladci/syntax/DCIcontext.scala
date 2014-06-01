@@ -4,8 +4,6 @@ import util._
 
 class DCIcontext extends DCIspecification {
 
-  // DCI Context ...
-
   "Can only be a class, abstract class, case class, trait or object" >> {
 
     @context

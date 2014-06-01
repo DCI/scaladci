@@ -4,8 +4,6 @@ import util._
 
 class RoleBinding extends DCIspecification {
 
-  // Role binding ...
-
    "Through identifier of environment object" >> {
 
     // Data object `Foo` binds to Role `Foo` since they share name

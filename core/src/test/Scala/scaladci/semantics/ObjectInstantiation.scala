@@ -4,8 +4,6 @@ import util._
 
 class ObjectInstantiation extends DCIspecification {
 
-  // Object instantiation ...
-
   "In environment (passed to Context)" >> {
 
     @context
@@ -28,7 +26,7 @@ class ObjectInstantiation extends DCIspecification {
     @context
     case class Context(i: Int) {
 
-      val Foo = Data(i)
+      val Foo = new Data(i)
 
       def trigger = Foo.foo
 

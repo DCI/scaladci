@@ -4,8 +4,6 @@ import util._
 
 class RolePlayerLifetime extends DCIspecification {
 
-  // Role Player lifetime ...
-
   "Is limited to Context execution" >> {
 
     @context

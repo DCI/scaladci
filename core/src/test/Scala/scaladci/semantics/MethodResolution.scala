@@ -3,7 +3,6 @@ package semantics
 import util._
 import scala.language.reflectiveCalls
 
-
 class Obj {
   def foo = "FOO"
   def bar = "BAR" + foo

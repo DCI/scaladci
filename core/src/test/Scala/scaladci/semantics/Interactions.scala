@@ -4,8 +4,6 @@ import util._
 
 class Interactions extends DCIspecification {
 
-  // Interactions ...
-
   "Are preferably distributed between Roles" >> {
 
     @context

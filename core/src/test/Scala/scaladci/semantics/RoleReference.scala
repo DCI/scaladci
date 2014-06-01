@@ -4,8 +4,6 @@ import util._
 
 class RoleReference extends DCIspecification {
 
-  // Role reference ...
-
   "Can be a Role name" >> {
 
     @context

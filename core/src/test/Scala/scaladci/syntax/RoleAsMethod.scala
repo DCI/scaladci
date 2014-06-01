@@ -4,8 +4,6 @@ import util._
 
 class RoleAsMethod extends DCIspecification {
 
-  // `role` as method ...
-
   "Can define implemented Roles" >> {
 
     @context class Context(Foo: Data) {

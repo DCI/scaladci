@@ -4,8 +4,6 @@ import util._
 
 class Context extends DCIspecification {
 
-  // Context ...
-
   "Cannot define a nested DCI Context" >> {
 
     expectCompileError(

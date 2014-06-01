@@ -4,8 +4,6 @@ import util._
 
 class RoleBody extends DCIspecification {
 
-  // Role body ...
-
   "Can define role method(s)" >> {
 
     @context

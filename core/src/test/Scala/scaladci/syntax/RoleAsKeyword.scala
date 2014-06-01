@@ -4,8 +4,6 @@ import util._
 
 class RoleAsKeyword extends DCIspecification {
 
-  // `role` as keyword ...
-
   "Can define implemented Roles" >> {
 
     @context class Context(Foo: Data) {

@@ -1,11 +1,10 @@
 package scaladci
 package semantics
+
 import util._
 import scala.language.reflectiveCalls
 
 class RoleContract extends DCIspecification {
-
-  // Role contract ...
 
   "Can be a type" >> {
 
@@ -18,7 +17,7 @@ class RoleContract extends DCIspecification {
         def foo = self.number // We know type `Data` (and that it has a number method)
       }
     }
-    Context(Data(42)).trigger === 42
+    Context(new Data(42)).trigger === 42
   }
 
 
@@ -34,7 +33,7 @@ class RoleContract extends DCIspecification {
         def foo = self.number
       }
     }
-    Context(Data(42)).trigger === 42
+    Context(new Data(42)).trigger === 42
 
 
     case class NastyData(i: Int) {
@@ -56,5 +55,27 @@ class RoleContract extends DCIspecification {
       }
     }
     NaiveContext(NastyData(42)).trigger === 42 // + world war III
+  }
+
+
+  "Can be a mix of type and structural type" >> {
+
+    class Data(i: Int) {
+      def number = i
+    }
+    case class OtherData(i: Int) extends Data(i) {
+      def text = "My number is: "
+    }
+
+    @context
+    case class Context(a: Data {def text: String}) { // <- OtherData will satisfy this contract
+
+      def trigger = a.foo
+
+      role a {
+        def foo = self.text + self.number// `Data` has a `number` method and there should also be some `text` method...
+      }
+    }
+    Context(OtherData(42)).trigger === "My number is: 42"
   }
 }
