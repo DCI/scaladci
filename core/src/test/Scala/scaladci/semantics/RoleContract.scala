@@ -101,4 +101,53 @@ class RoleContract extends DCIspecification {
     val externalTrustedObject = UntrustworthyData(42)
     Context(externalTrustedObject).trigger === -666 // Not 42 !!! Auch
   }
+
+
+  "Can't omit instance method defined in structural type" >> {
+
+    trait Data {
+      def foo: Boolean
+      val i: Int
+    }
+    case class DataA(s: String) extends Data {
+      def foo = true
+      def text = s
+      val i = 1
+    }
+    case class DataB(s: String, i: Int) extends Data {
+      def foo = true
+      def text = s
+      def number = i
+    }
+    case class DataC(i: Int) extends Data {
+      def foo = false
+      def number = i
+    }
+
+    @context
+    case class Context(MyRole: Data {def text: String}) {
+
+      def trigger = MyRole.bar
+
+      role MyRole {
+        def bar = {
+          val result = if (self.foo) "Yes!" else "No!"
+          val status = self.text + result
+          status // returns the value
+        }
+      }
+    }
+
+    Context(DataA("Will A fulfill the Role contract? ")).trigger     === "Will A fulfill the Role contract? Yes!"
+    Context(DataB("Will B fulfill the Role contract? ", 42)).trigger === "Will B fulfill the Role contract? Yes!"
+
+    // This won't compile:
+    // Context(DataC(911)).trigger === ...
+
+    // Gives the following error message:
+
+    // Type mismatch
+    // expected: Data {def text: String}
+    // actual:   DataC
+  }
 }
