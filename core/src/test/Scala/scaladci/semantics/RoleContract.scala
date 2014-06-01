@@ -4,7 +4,7 @@ package semantics
 import util._
 import scala.language.reflectiveCalls
 
-class RoleContract extends DCIspecification {
+class RoleContracti extends DCIspecification {
 
   "Can be a type" >> {
 
@@ -77,5 +77,28 @@ class RoleContract extends DCIspecification {
       }
     }
     Context(OtherData(42)).trigger === "My number is: 42"
+  }
+
+
+  "Can naïvely rely on a type" >> {
+
+    class Data(i: Int) {
+      def number = i
+    }
+    case class UntrustworthyData(i: Int) extends Data(i) {
+      override def number = -666
+    }
+
+    @context
+    case class Context(MyRole: Data) { // <- We feel falsely safe :-(
+
+      def trigger = MyRole.foo
+
+      role MyRole {
+        def foo = self.number
+      }
+    }
+    val externalTrustedObject = UntrustworthyData(42)
+    Context(externalTrustedObject).trigger === -666 // Not 42 !!! Auch
   }
 }
