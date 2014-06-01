@@ -6,8 +6,8 @@ class RoleAsMethod extends DCIspecification {
 
   "Can define implemented Roles" >> {
 
-    @context class Context(Foo: Data) {
-      role(Foo) {
+    @context class Context(MyRole: Data) {
+      role(MyRole) {
         def roleMethod = 1
       }
     }
@@ -18,8 +18,8 @@ class RoleAsMethod extends DCIspecification {
 
   "Can define methodless Roles" >> {
 
-    @context class Context3(Foo: Data) {
-      role(Foo) {}
+    @context class Context3(MyRole: Data) {
+      role(MyRole) {}
     }
     success
   }
@@ -48,7 +48,7 @@ class RoleAsMethod extends DCIspecification {
     expectCompileError(
       """
           @context
-          class Context(Foo: Data) {
+          class Context(MyRole: Data) {
             role(null)
           }
       """,
@@ -57,7 +57,7 @@ class RoleAsMethod extends DCIspecification {
     expectCompileError(
       """
           @context
-          class Context(Foo: Data) {
+          class Context(MyRole: Data) {
             role()()
           }
       """,
@@ -66,7 +66,7 @@ class RoleAsMethod extends DCIspecification {
     expectCompileError(
       """
           @context
-          class Context(Foo: Data) {
+          class Context(MyRole: Data) {
             role(){}
           }
       """,
@@ -75,7 +75,7 @@ class RoleAsMethod extends DCIspecification {
     expectCompileError(
       """
           @context
-          class Context(Foo: Data) {
+          class Context(MyRole: Data) {
             role{}()
           }
       """,
@@ -84,7 +84,7 @@ class RoleAsMethod extends DCIspecification {
     expectCompileError(
       """
           @context
-          class Context(Foo: Data) {
+          class Context(MyRole: Data) {
             role{}{}
           }
       """,
@@ -99,8 +99,8 @@ class RoleAsMethod extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
-          role(Foo)
+        class Context(MyRole: Data) {
+          role(MyRole)
         }
       """,
       "missing arguments for method role in package scaladci")
@@ -114,17 +114,17 @@ class RoleAsMethod extends DCIspecification {
     expectCompileError(
       """
           @context
-          class Context(Foo: Data) {
-            role("Foo")
+          class Context(MyRole: Data) {
+            role("MyRole")
           }
       """,
-      "(1) String as role name identifier is not allowed. Please use a variable instead. Found: Foo")
+      "(1) String as role name identifier is not allowed. Please use a variable instead. Found: MyRole")
 
 
     expectCompileError(
       """
           @context
-          class Context(Foo: Data) {
+          class Context(MyRole: Data) {
             role(42)
           }
       """,
@@ -133,7 +133,7 @@ class RoleAsMethod extends DCIspecification {
     expectCompileError(
       """
           @context
-          class Context(Foo: Data) {
+          class Context(MyRole: Data) {
             role(42.0)
           }
       """,
@@ -142,7 +142,7 @@ class RoleAsMethod extends DCIspecification {
     expectCompileError(
       """
           @context
-          class Context(Foo: Data) {
+          class Context(MyRole: Data) {
             role(42f)
           }
       """,

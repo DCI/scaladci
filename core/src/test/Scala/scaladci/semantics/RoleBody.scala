@@ -7,13 +7,13 @@ class RoleBody extends DCIspecification {
   "Can define role method(s)" >> {
 
     @context
-    case class Context(Foo: Data) {
-      def trigger = Foo.bar
+    case class Context(MyRole: Data) {
+      def trigger = MyRole.bar
 
-      role Foo {
+      role MyRole {
         def bar = 2 * baz
         def baz = 3 * buz
-        def buz = 4 * Foo.i
+        def buz = 4 * MyRole.i
       }
     }
     Context(Data(5)).trigger === 2 * 3 * 4 * 5
@@ -25,34 +25,34 @@ class RoleBody extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
-          role Foo = {}
+        class Context(MyRole: Data) {
+          role MyRole = {}
         }
       """,
-      "(1) Can't assign a Role body to `Foo`. Please remove `=` before the body definition")
+      "(1) Can't assign a Role body to `MyRole`. Please remove `=` before the body definition")
 
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
-          role(Foo) = {}
+        class Context(MyRole: Data) {
+          role(MyRole) = {}
         }
       """,
-      "(2) Can't assign a Role body to `Foo`. Please remove `=` before the body definition")
+      "(2) Can't assign a Role body to `MyRole`. Please remove `=` before the body definition")
 
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
+        class Context(MyRole: Data) {
           role() = {}
         }
       """,
       "(8) `role` keyword without Role name is not allowed")
 
     @context
-    class Context(Foo: Data, Bar: Data) {
-      role Foo {} // ok without `=`
-      role(Bar) {} // ok without `=`
+    class Context(RoleA: Data, RoleB: Data) {
+      role RoleA {} // ok without `=`
+      role(RoleB) {} // ok without `=`
     }
 
     success
@@ -64,30 +64,30 @@ class RoleBody extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Int) {
-          role Foo {
+        class Context(MyRole: Int) {
+          role MyRole {
             val notAllowed = 42   // <-- no state in Roles!
           }
         }
       """,
       """
         |Roles are only allowed to define methods.
-        |Please remove the following code from `Foo`:
+        |Please remove the following code from `MyRole`:
         |CODE: val notAllowed = 42
       """)
 
     expectCompileError(
       """
         @context
-        class Context(Foo: Int) {
-          role Foo {
+        class Context(MyRole: Int) {
+          role MyRole {
             var notAllowed = 42   // <-- no state in Roles!
           }
         }
       """,
       """
         |Roles are only allowed to define methods.
-        |Please remove the following code from `Foo`:
+        |Please remove the following code from `MyRole`:
         |CODE: var notAllowed = 42
       """)
 
@@ -100,15 +100,15 @@ class RoleBody extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Int) {
-          role Foo {
+        class Context(MyRole: Int) {
+          role MyRole {
             type notAllowed = String   // <-- no type definitions in Roles ...?!
           }
         }
       """,
       """
         |Roles are only allowed to define methods.
-        |Please remove the following code from `Foo`:
+        |Please remove the following code from `MyRole`:
         |CODE: type notAllowed = String
       """)
     success
@@ -120,15 +120,15 @@ class RoleBody extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Int) {
-          role Foo {
+        class Context(MyRole: Int) {
+          role MyRole {
             class NoClass  // <-- no class definitions in Roles!
           }
         }
       """,
       """
         |Roles are only allowed to define methods.
-        |Please remove the following code from `Foo`:
+        |Please remove the following code from `MyRole`:
         |CODE: class NoClass extends scala.AnyRef {
         |  def <init>() = {
         |    super.<init>();
@@ -140,15 +140,15 @@ class RoleBody extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Int) {
-          role Foo {
+        class Context(MyRole: Int) {
+          role MyRole {
             case class NoCaseClass()  // <-- no class definitions in Roles!
           }
         }
       """,
       """
         |Roles are only allowed to define methods.
-        |Please remove the following code from `Foo`:
+        |Please remove the following code from `MyRole`:
         |CODE: case class NoCaseClass extends scala.Product with scala.Serializable {
         |  def <init>() = {
         |    super.<init>();
@@ -160,30 +160,30 @@ class RoleBody extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Int) {
-          role Foo {
+        class Context(MyRole: Int) {
+          role MyRole {
             trait NoTrait
           }
         }
       """,
       """
         |Roles are only allowed to define methods.
-        |Please remove the following code from `Foo`:
+        |Please remove the following code from `MyRole`:
         |CODE: abstract trait NoTrait extends scala.AnyRef
       """)
 
     expectCompileError(
       """
         @context
-        class Context(Foo: Int) {
-          role Foo {
+        class Context(MyRole: Int) {
+          role MyRole {
             object NoObject
           }
         }
       """,
       """
         |Roles are only allowed to define methods.
-        |Please remove the following code from `Foo`:
+        |Please remove the following code from `MyRole`:
         |CODE: object NoObject extends scala.AnyRef {
         |  def <init>() = {
         |    super.<init>();
@@ -201,15 +201,15 @@ class RoleBody extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Int) {
-          role Foo {
+        class Context(MyRole: Int) {
+          role MyRole {
             role NestedRole {}
           }
         }
       """,
       """
         |Roles are only allowed to define methods.
-        |Please remove the following code from `Foo`:
+        |Please remove the following code from `MyRole`:
         |CODE: role.NestedRole(())
       """)
 

@@ -7,19 +7,19 @@ class RolePlayerLifetime extends DCIspecification {
   "Is limited to Context execution" >> {
 
     @context
-    case class Context(Foo: Data) {
-      def trigger = Foo.bar
+    case class Context(MyRole: Data) {
+      def trigger = MyRole.bar
 
-      role Foo {
-        def bar = Foo.i * 2
+      role MyRole {
+        def bar = MyRole.i * 2
       }
     }
     val obj = Data(42)
 
-    // `obj` plays Foo in Context
+    // `obj` plays MyRole in Context
     Context(obj).trigger === 42 * 2
 
-    // `obj` no longer plays Foo
+    // `obj` no longer plays MyRole
     expectCompileError(
       "obj.bar",
       "value bar is not a member of RolePlayerLifetime.this.Data")

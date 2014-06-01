@@ -7,9 +7,9 @@ class ContextAnnotation extends DCIspecification {
   "@context is standard (?)" >> {
 
     @context
-    class Context(Foo: Data) {
-      def execute = Foo.value
-      role Foo {
+    class Context(MyRole: Data) {
+      def execute = MyRole.value
+      role MyRole {
         def value = self.i * 2
       }
     }
@@ -21,9 +21,9 @@ class ContextAnnotation extends DCIspecification {
   "@dci could be meaningful too" >> {
 
     @dci
-    class Context2(Foo: Data) {
-      def execute = Foo.value
-      role Foo {
+    class Context2(MyRole: Data) {
+      def execute = MyRole.value
+      role MyRole {
         def value = self.i * 2
       }
     }
@@ -34,9 +34,9 @@ class ContextAnnotation extends DCIspecification {
 
   "@use with case class could be meaningful for @use cases" >> {
 
-    @use case class MyUseCase(Foo: Data) {
-      def execute = Foo.value
-      role Foo {
+    @use case class MyUseCase(MyRole: Data) {
+      def execute = MyRole.value
+      role MyRole {
         def value = self.i * 2
       }
     }

@@ -7,17 +7,17 @@ class ObjectIdentity extends DCIspecification {
   "Is same when playing a Role" >> {
 
     @context
-    case class Context(Foo: Data) {
-      val Bar = Data(42)
+    case class Context(RoleA: Data) {
+      val RoleB = Data(42)
 
-      def foo = Foo.me
-      def bar = Bar.me
+      def foo = RoleA.me
+      def bar = RoleB.me
 
-      role Foo {
+      role RoleA {
         def me = self
       }
 
-      role Bar {
+      role RoleB {
         def me = self
       }
     }

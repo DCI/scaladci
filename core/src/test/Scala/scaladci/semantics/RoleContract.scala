@@ -9,11 +9,11 @@ class RoleContract extends DCIspecification {
   "Can be a type" >> {
 
     @context
-    case class Context(a: Data) {
+    case class Context(MyRole: Data) {
 
-      def trigger = a.foo
+      def trigger = MyRole.foo
 
-      role a {
+      role MyRole {
         def foo = self.number // We know type `Data` (and that it has a number method)
       }
     }
@@ -24,11 +24,11 @@ class RoleContract extends DCIspecification {
   "Can be a structural type (duck typing)" >> {
 
     @context
-    case class Context(a: {def number: Int}) {
+    case class Context(MyRole: {def number: Int}) {
 
-      def trigger = a.foo
+      def trigger = MyRole.foo
 
-      role a {
+      role MyRole {
         // We know that the instance (of unknown type) has a `number` method returning Int
         def foo = self.number
       }
@@ -44,11 +44,11 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class NaiveContext(a: {def number: Int}) {
+    case class NaiveContext(MyRole: {def number: Int}) {
 
-      def trigger = a.foo
+      def trigger = MyRole.foo
 
-      role a {
+      role MyRole {
         // We know that the instance (of unknown type) has a `number` method returning Int
         // - but we don't know that it also fire off missiles!!!
         def foo = self.number
@@ -58,7 +58,7 @@ class RoleContract extends DCIspecification {
   }
 
 
-  "Can be a mix of type and structural type" >> {
+  "Can be a mix of a type and a structural type" >> {
 
     class Data(i: Int) {
       def number = i
@@ -68,11 +68,11 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class Context(a: Data {def text: String}) { // <- OtherData will satisfy this contract
+    case class Context(MyRole: Data {def text: String}) { // <- OtherData will satisfy this contract
 
-      def trigger = a.foo
+      def trigger = MyRole.foo
 
-      role a {
+      role MyRole {
         def foo = self.text + self.number// `Data` has a `number` method and there should also be some `text` method...
       }
     }

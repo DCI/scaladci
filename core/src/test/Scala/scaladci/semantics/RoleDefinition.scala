@@ -7,16 +7,16 @@ class RoleDefinition extends DCIspecification {
   "Can only be at top level in Context" >> {
 
     @context
-    class OkContext(Foo: Data) {
-      role Foo {}
+    class OkContext(MyRole: Data) {
+      role MyRole {}
     }
 
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
+        class Context(MyRole: Data) {
           def subLevel() {
-            role Foo ()
+            role MyRole ()
           }
         }
       """,
@@ -25,9 +25,9 @@ class RoleDefinition extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
+        class Context(MyRole: Data) {
           def subLevel() {
-            role Foo {}
+            role MyRole {}
           }
         }
       """,
@@ -36,9 +36,9 @@ class RoleDefinition extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
+        class Context(MyRole: Data) {
           def subLevel() {
-            role(Foo)
+            role(MyRole)
           }
         }
       """,
@@ -47,9 +47,9 @@ class RoleDefinition extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
+        class Context(MyRole: Data) {
           def subLevel() {
-            role(Foo) {}
+            role(MyRole) {}
           }
         }
       """,
@@ -58,9 +58,9 @@ class RoleDefinition extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
+        class Context(MyRole: Data) {
           def subLevel() {
-            role Foo
+            role MyRole
           }
         }
       """,
@@ -75,8 +75,8 @@ class RoleDefinition extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
-          role(role Foo)
+        class Context(MyRole: Data) {
+          role(role MyRole)
         }
       """,
       "(2) Using `role` keyword on a sub level of the Context is not allowed")
@@ -90,32 +90,32 @@ class RoleDefinition extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
-          role Foo {}
-          role Foo {}
+        class Context(MyRole: Data) {
+          role MyRole {}
+          role MyRole {}
         }
       """,
-      "Can't define role `Foo` twice")
+      "Can't define role `MyRole` twice")
 
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
-          role(Foo)()
-          role(Foo)()
+        class Context(MyRole: Data) {
+          role(MyRole)()
+          role(MyRole)()
         }
       """,
-      "Can't define role `Foo` twice")
+      "Can't define role `MyRole` twice")
 
     expectCompileError(
       """
         @context
-        class Context(Foo: Data) {
-          role Foo {}
-          role(Foo)()
+        class Context(MyRole: Data) {
+          role MyRole {}
+          role(MyRole)()
         }
       """,
-      "Can't define role `Foo` twice")
+      "Can't define role `MyRole` twice")
 
     success
   }

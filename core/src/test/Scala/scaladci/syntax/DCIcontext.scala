@@ -7,31 +7,31 @@ class DCIcontext extends DCIspecification {
   "Can only be a class, abstract class, case class, trait or object" >> {
 
     @context
-    class ClassContext(Foo: Data) {
-      role Foo {}
+    class ClassContext(MyRole: Data) {
+      role MyRole {}
     }
 
     @context
-    abstract class AbstractClassContext(Foo: Data) {
-      role Foo {}
+    abstract class AbstractClassContext(MyRole: Data) {
+      role MyRole {}
     }
 
     @context
-    case class CaseClassContext(Foo: Data) {
-      role Foo {}
+    case class CaseClassContext(MyRole: Data) {
+      role MyRole {}
     }
 
     @context
     trait TraitContext {
-      val Foo = Data(42)
-      role Foo {}
+      val MyRole = Data(42)
+      role MyRole {}
     }
 
     @context
     object ObjectContext {
       // Objects to play a Role are instantiated inside the Context object
-      val Foo = Data(42)
-      role Foo {}
+      val MyRole = Data(42)
+      role MyRole {}
     }
 
     expectCompileError(

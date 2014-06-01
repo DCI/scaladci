@@ -6,13 +6,13 @@ class RoleBinding extends DCIspecification {
 
    "Through identifier of environment object" >> {
 
-    // Data object `Foo` binds to Role `Foo` since they share name
+    // Data object `MyRole` binds to Role `MyRole` since they share name
     @context
-    case class Context(Foo: Data) {
-      def trigger = Foo.foo
+    case class Context(MyRole: Data) {
+      def trigger = MyRole.foo
 
-      role Foo {
-        def foo = Foo.i * 2
+      role MyRole {
+        def foo = MyRole.i * 2
       }
     }
 
@@ -25,13 +25,13 @@ class RoleBinding extends DCIspecification {
 
     @context
     case class Context(i: Int) {
-      // Variable `Foo` identifies instantiated `Data` object in Context
-      // Variable `Foo` binds to Role `Foo` since they share name
-      val Foo = Data(i)
-      def trigger = Foo.foo
+      // Variable `MyRole` identifies instantiated `Data` object in Context
+      // Variable `MyRole` binds to Role `MyRole` since they share name
+      val MyRole = Data(i)
+      def trigger = MyRole.foo
 
-      role Foo {
-        def foo = Foo.i * 2
+      role MyRole {
+        def foo = MyRole.i * 2
       }
     }
 
@@ -42,16 +42,16 @@ class RoleBinding extends DCIspecification {
   "Dynamically through new variable name identifying another object/RolePlayer in Context" >> {
 
     @context
-    case class Context(Foo: Data) {
+    case class Context(RoleA: Data) {
 
-      // Variable `Bar` references `Foo` object
-      // Variable `Bar` binds to Role `Bar` since they share name
-      val Bar = Foo
+      // Variable `RoleB` references `RoleA` object
+      // Variable `RoleB` binds to Role `RoleB` since they share name
+      val RoleB = RoleA
 
-      def trigger = Bar.bar
+      def trigger = RoleB.bar
 
-      role Bar {
-        def bar = Bar.i * 2
+      role RoleB {
+        def bar = RoleB.i * 2
       }
     }
 
