@@ -4,7 +4,7 @@ package semantics
 import util._
 import scala.language.reflectiveCalls
 
-class RoleContracti extends DCIspecification {
+class RoleContract extends DCIspecification {
 
   "Can be a type" >> {
 
