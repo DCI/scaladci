@@ -58,6 +58,38 @@ class RoleContract extends DCIspecification {
   }
 
 
+  "Can require several instance methods with structural types (duck typing)" >> {
+
+    case class Kid() {
+      def age = 16
+      def name = "John"
+    }
+    case class Adult() {
+      def age = 32
+      def name = "Alex"
+    }
+
+    @context
+    case class Disco(Visitor: {
+      def age: Int
+      def name: String}) {
+
+      def letMeDance = Visitor.canIGetIn
+
+      role Visitor {
+        def canIGetIn = {
+          if (self.age < 18)
+            s"Sorry, ${self.name}, you're only ${self.age} years old. I can't let you in."
+          else
+            s"Welcome, ${self.name}. Shall I take your coat?"
+        }
+      }
+    }
+    Disco(Kid()).letMeDance === "Sorry, John, you're only 16 years old. I can't let you in."
+    Disco(Adult()).letMeDance === "Welcome, Alex. Shall I take your coat?"
+  }
+
+
   "Can be a mix of a type and a structural type" >> {
 
     class Data(i: Int) {
@@ -68,16 +100,19 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class Context(MyRole: Data {def text: String}) { // <- OtherData will satisfy this contract
+    case class Context(MyRole: Data {def text: String}) {
+      // <- OtherData will satisfy this contract
 
       def trigger = MyRole.foo
 
       role MyRole {
-        def foo = self.text + self.number// `Data` has a `number` method and there should also be some `text` method...
+        def foo = self.text + self.number // `Data` has a `number` method and there should also be some `text` method...
       }
     }
     Context(OtherData(42)).trigger === "My number is: 42"
   }
+
+
 
 
   "Can naïvely rely on a type" >> {
@@ -90,7 +125,8 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class Context(MyRole: Data) { // <- We feel falsely safe :-(
+    case class Context(MyRole: Data) {
+      // <- We feel falsely safe :-(
 
       def trigger = MyRole.foo
 
@@ -133,12 +169,12 @@ class RoleContract extends DCIspecification {
         def bar = {
           val result = if (self.foo) "Yes!" else "No!"
           val status = self.text + result
-          status // returns the value
+          status
         }
       }
     }
 
-    Context(DataA("Will A fulfill the Role contract? ")).trigger     === "Will A fulfill the Role contract? Yes!"
+    Context(DataA("Will A fulfill the Role contract? ")).trigger === "Will A fulfill the Role contract? Yes!"
     Context(DataB("Will B fulfill the Role contract? ", 42)).trigger === "Will B fulfill the Role contract? Yes!"
 
     // This won't compile:
