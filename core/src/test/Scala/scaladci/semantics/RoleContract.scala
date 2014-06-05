@@ -40,8 +40,8 @@ import scala.language.reflectiveCalls
   When a Role is more flexible and wants to allow a broader set of objects
   to be able to play it, then a structural type (a la duck-typing) will come
   in handy. The role contract would then define what method signature(s) a
-  Role expects. The backside of that coin is of course that we wouldn't know
-  what those methods do.
+  Role expects. The backside of that coin is of course that we would know
+  much less about what those methods do.
 
 
   Levels of predictability:
