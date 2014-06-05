@@ -26,7 +26,7 @@ class ObjectInstantiation extends DCIspecification {
     @context
     case class Context(i: Int) {
 
-      val MyRole = new Data(i)
+      val MyRole = Data(i)
 
       def trigger = MyRole.foo
 
