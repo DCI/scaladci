@@ -38,13 +38,13 @@ Main Success Scenario
 ---------------------------------------------------------------------------
 1. Customer selects desired Product [can repeat]
     - Warehouse confirms Product availability
+2. System adds product with qualified price to Cart
     - Company membership database provides eligible customer discount factor for Product
-    - System adds product with qualified price to Cart
     - UI shows updated content of Cart to Customer
-2. Customer requests to review Order
+3. Customer requests to review Order
     - System collects Cart items
     - UI shows content of cart to Customer
-3. Customer requests to pay Order
+4. Customer requests to pay Order
     - Payment Gateway confirms Customer has sufficient funds available
     - Payment Gateway initiates transfer of funds to Company
     - Warehouse prepare products for shipment to Customer
@@ -58,7 +58,7 @@ Deviations
 1b. Customer has gold membership:
     1. System adds discounted product to Cart.
 
-3a. Customer has insufficient funds to pay Order:
+4a. Customer has insufficient funds to pay Order:
     1. UI informs Customer of insufficient funds available.
         a. Customer removes unaffordable Product from Cart
             1. System updates content of Cart
@@ -138,9 +138,8 @@ class ShoppingCart7 extends Specification {
 
     role Cart {
       def addItem(productId: Int) = {
-        val discountFactor = Customer.discountFactor
         val product = Warehouse.get(productId)
-        val qualifiedPrice = (product.price * discountFactor).toInt
+        val qualifiedPrice = (product.price * Customer.discountFactor).toInt
         val qualifiedProduct = product.copy(price = qualifiedPrice)
 
         self.items.put(productId, qualifiedProduct)
