@@ -18,8 +18,11 @@ Each trigger method in the Context is named after the overall description of tho
 system response actions rather than the User action/step that initiates them as we
 had in earlier versions.
 
-See discussion at:
+See discussion about the current version at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/E6fTRc9R9j8
+
+.. and original discussion:
+https://groups.google.com/d/msg/object-composition/JJiLWBsZWu0/1u6HW3J_nawJ
 
 ===========================================================================
 USE CASE:	Place Order [user-goal]
@@ -130,7 +133,7 @@ class ShoppingCart7 extends Specification {
     role Company {}
 
     role Customer {
-      def withdrawFunds(amountToPay: Int) { self.cash -= amountToPay }
+      def withdrawFunds(amountToPay: Int) { Customer.cash -= amountToPay }
       def receiveProducts(products: Seq[(Int, Product)]) { Customer.owns ++= products }
       def isGoldMember = Company.goldMembers.contains(Customer)
       def discountFactor = if (isGoldMember) 0.5 else 1
@@ -142,7 +145,7 @@ class ShoppingCart7 extends Specification {
         val qualifiedPrice = (product.price * Customer.discountFactor).toInt
         val qualifiedProduct = product.copy(price = qualifiedPrice)
 
-        self.items.put(productId, qualifiedProduct)
+        Cart.items.put(productId, qualifiedProduct)
         Some(qualifiedProduct)
       }
       def removeItem(productId: Int): Option[Product] = {
