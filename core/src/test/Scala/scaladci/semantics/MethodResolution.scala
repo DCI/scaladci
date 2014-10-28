@@ -173,7 +173,7 @@ class MethodResolution extends DCIspecification {
   }
 
 
-  "Egon Elbre's Toture Test, the Tournament" >> {
+  "Egon Elbre's Torture Test, the Tournament" >> {
 
     // https://groups.google.com/d/msg/object-composition/AsvEI7iJSDs/_HX5S4Ep9Q4J
 
