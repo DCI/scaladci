@@ -157,7 +157,7 @@ class MethodResolution extends DCIspecification {
     }
 
     val a = new A
-    //    doIt(a, a)
+    doIt(a, a)
 
     /* Prints as expected:
 
