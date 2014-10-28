@@ -1,9 +1,9 @@
 package scaladci
-
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox.{Context => MacroContext}
 import scala.annotation.StaticAnnotation
 import scaladci.util.MacroHelper
+
 
 // Annotation alternatives //////////////////////////////////////////////////
 
@@ -81,7 +81,8 @@ object ContextTransformer {
 
         // Disallow `this` in role method body
         case thisRoleMethodRef@Select(This(typeNames.EMPTY), TermName(methodName)) =>
-          abort("`this` in a role method points to the Context and is not allowed in a DCI Context.\n" +
+          abort("`this` in a role method points to the Context which is unintentional from a DCI perspective (where it would normally point to the RolePlayer).\n" +
+//          abort("`this` in a role method points to the Context and is not allowed in a DCI Context.\n" +
             "Please access Context members directly if needed or use `self` to reference the Role Player.")
           EmptyTree
 

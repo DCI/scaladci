@@ -1,14 +1,15 @@
 package scaladci
 package semantics
-import util._
 import scala.language.reflectiveCalls
+import scaladci.util._
 
-class Obj {
-  def foo = "FOO"
-  def bar = "BAR" + foo
-}
 
 class MethodResolution extends DCIspecification {
+
+  class Obj {
+    def foo = "FOO"
+    def bar = "BAR" + foo
+  }
 
   "Role method takes precedence over instance method" >> {
 
@@ -156,7 +157,7 @@ class MethodResolution extends DCIspecification {
     }
 
     val a = new A
-    doIt(a, a)
+    //    doIt(a, a)
 
     /* Prints as expected:
 
@@ -168,7 +169,91 @@ class MethodResolution extends DCIspecification {
       foo of z z
 
     */
+    success
+  }
 
+
+  "Egon Elbre's Toture Test, the Tournament" >> {
+
+    // https://groups.google.com/d/msg/object-composition/AsvEI7iJSDs/_HX5S4Ep9Q4J
+
+    case class Player(name: String, msg: String) {
+      def say() {
+        println(s"[$name] $msg")
+      }
+    }
+
+    def doInterview(player: Player) {
+      println("[Interviewer] Hello!")
+      player.say()
+    }
+
+    def callback(fn: () => Unit) {
+      fn()
+    }
+
+    @context
+    case class Battle(Id: Int, Bear: Player, Lion: Player) {
+
+      def start() {
+        println(Id + " battle commencing:")
+        Bear.fight()
+      }
+      def interview() {
+        doInterview(Bear)
+        doInterview(Lion)
+      }
+
+      role Bear {
+        def say() {
+          println(Id + " [" + self.name + "] Grrrr.....")
+        }
+        def fight() {
+          Bear.say()
+          Lion.fight()
+        }
+      }
+
+      role Lion {
+        def say() {
+          println(Id + " [" + self.name + "] Meow.....")
+        }
+        def fight() {
+          callback(Lion.say)
+        }
+      }
+    }
+
+    val human = Player("Jack", "says Hello!")
+    val cpu = Player("Cyborg", "bleeps Hello!")
+
+    val b1 = Battle(1, human, cpu)
+    val b2 = Battle(2, cpu, human)
+    val b3 = Battle(3, cpu, cpu)
+
+    b1.start()
+    b2.start()
+    b3.start()
+
+    b1.interview()
+
+    /* Prints as expected:
+
+      1 battle commencing:
+      1 [Jack] Grrrr.....
+      1 [Cyborg] Meow.....
+      2 battle commencing:
+      2 [Cyborg] Grrrr.....
+      2 [Jack] Meow.....
+      3 battle commencing:
+      3 [Cyborg] Grrrr.....
+      3 [Cyborg] Meow.....
+      [Interviewer] Hello!
+      [Jack] says Hello!
+      [Interviewer] Hello!
+      [Cyborg] bleeps Hello!
+
+    */
     success
   }
 }

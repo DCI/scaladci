@@ -57,7 +57,7 @@ class RoleReference extends DCIspecification {
         }
       """,
       """
-        |`this` in a role method points to the Context and is not allowed in a DCI Context.
+        |`this` in a role method points to the Context which is unintentional from a DCI perspective (where it would normally point to the RolePlayer).
         |Please access Context members directly if needed or use `self` to reference the Role Player.
       """)
 
