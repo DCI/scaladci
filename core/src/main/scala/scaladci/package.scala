@@ -3,7 +3,8 @@ import scala.language.dynamics
 package object scaladci {
 
   // `role` as method
-  def role(instance: Any)(roleMethods: => Unit) {}
+  def role(instance: Unit): Unit = {}
+  def role(instance: Any)(roleMethods: => Unit): Unit = {}
 
   // `role` as field
   val role = roleO

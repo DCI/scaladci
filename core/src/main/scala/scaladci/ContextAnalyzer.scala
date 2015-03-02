@@ -1,8 +1,6 @@
 package scaladci
 import scala.reflect.macros.whitebox.{Context => MacroContext}
 import scaladci.util.MacroHelper
-import scala._
-import scala.Some
 
 trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
   import c0.universe._, Flag._

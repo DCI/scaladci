@@ -27,7 +27,8 @@ object expectCompileError {
     }
 
     try {
-      c.typecheck(c.parse("{ " + codeStr + " }"))
+      val dummy = TermName(c.freshName)
+      c.typecheck(c.parse(s"{ val $dummy = { $codeStr } ; () }"))
       c.abort(c.enclosingPosition,
         s"""Type-checking succeeded unexpectedly!!!
           |CODE:

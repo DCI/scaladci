@@ -171,7 +171,7 @@ class ShoppingCart6 extends Specification {
   "Main success scenario" in new shoppingCart {
 
     // Initial status (same for all tests...)
-    shop.stock === Map(wax, tires, bmw)
+    shop.stock === Map(tires, wax, bmw)
     shop.cash === 100000
     customer.cash === 20000
     customer.owns === Map()
@@ -189,7 +189,7 @@ class ShoppingCart6 extends Specification {
     shop.stock === Map(bmw)
     shop.cash === 100000 + 40 + 600
     customer.cash === 20000 - 40 - 600
-    customer.owns === Map(wax, tires)
+    customer.owns === Map(tires, wax)
   }
 
   "Product out of stock" in new shoppingCart {
@@ -256,7 +256,7 @@ class ShoppingCart6 extends Specification {
     order.processProductRemoval(p3)
 
     // Customer aborts shopping and no purchases are made
-    shop.stock === Map(wax, tires, bmw)
+    shop.stock === Map(tires, wax, bmw)
     shop.cash === 100000
     customer.cash === 20000
     customer.owns === Map()

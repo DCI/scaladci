@@ -1,28 +1,58 @@
 import sbt._
 import sbt.Keys._
 
-object build extends Build with BuildSettings {
-  lazy val root                = project in file(".") settings (_root: _*) aggregate(scaladci, `scaladci-examples`)
-  lazy val scaladci            = project in file("core") settings (_core: _*)
-  lazy val `scaladci-examples` = project in file("examples") settings (_examples: _*) dependsOn scaladci
-}
+object ScalaDciBuild extends Build with Publishing {
 
-trait BuildSettings extends Publishing {
-
-  lazy val shared = Defaults.defaultSettings ++ publishSettings ++ Seq(
-    organization := "org.scaladci",
-    version := "0.5.1",
-    scalaVersion := "2.11.0",
-    scalacOptions := Seq("-unchecked", "-deprecation", "-feature"),
-    resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snapshots")),
-    libraryDependencies += "org.specs2" %% "specs2" % "2.3.11" % "test",
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.0" cross CrossVersion.full)
+  lazy val scaladci = Project(
+    id = "scaladci",
+    base = file("."),
+    aggregate = Seq(scaladciCore, scaladciCoretest, scaladciExamples),
+    settings = commonSettings ++ Seq(
+      moduleName := "scaladci-root",
+      packagedArtifacts := Map.empty
+    )
   )
 
-  lazy val _root     = shared :+ (packagedArtifacts := Map.empty)
-  lazy val _core     = shared :+ (libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value)
-  lazy val _examples = shared :+ (packagedArtifacts := Map.empty)
+  lazy val scaladciCore = Project(
+    id = "scaladci-core",
+    base = file("core"),
+    settings = commonSettings ++ publishSettings ++ Seq(
+      moduleName := "scaladci"
+    )
+  )
+
+  lazy val scaladciCoretest = Project(
+    id = "scaladci-coretest",
+    base = file("coretest"),
+    dependencies = Seq(scaladciCore),
+    settings = commonSettings ++ Seq(
+      packagedArtifacts := Map.empty
+    )
+  )
+
+  lazy val scaladciExamples = Project(
+    id = "scaladci-examples",
+    base = file("examples"),
+    dependencies = Seq(scaladciCore),
+    settings = commonSettings ++ Seq(
+      packagedArtifacts := Map.empty
+    )
+  )
+
+  lazy val commonSettings = Defaults.coreDefaultSettings ++ Seq(
+    organization := "org.scaladci",
+    version := "0.5.2",
+    scalaVersion := "2.11.6",
+    scalacOptions := Seq("-unchecked", "-deprecation", "-feature"),
+    resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snapshots")),
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.specs2" %% "specs2" % "2.4.11" % "test"
+    ),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
+  )
 }
+
 
 trait Publishing {
   lazy val snapshots = "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
