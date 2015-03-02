@@ -258,7 +258,7 @@ how to create a DCI project.
 
 ## Using Scala DCI in your project
 
-ScalaDCI is available for Scala 2.11.6 at [Sonatype](https://oss.sonatype.org/index.html#nexus-search;quick%7Escaladci).
+ScalaDCI is available for Scala 2.11.6 at [Sonatype](https://oss.sonatype.org/content/repositories/releases/org/scaladci/scaladci_2.11/0.5.2/).
 To start coding with DCI in Scala add the following to your SBT build file:
 
     libraryDependencies ++= Seq(
