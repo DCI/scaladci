@@ -1,7 +1,7 @@
 package scaladci
+import scala.annotation.StaticAnnotation
 import scala.language.experimental.macros
 import scala.reflect.macros.whitebox.{Context => MacroContext}
-import scala.annotation.StaticAnnotation
 import scaladci.util.MacroHelper
 
 
@@ -30,18 +30,20 @@ object ContextTransformer {
 
   def transform(c: MacroContext)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     val helper = new MacroHelper[c.type] {val c0: c.type = c}
-    import c.universe._, Flag._, helper._
+    import c.universe._
+    import Flag._
+    import helper._
     val x = debug("ContextTransformer", 1)
 
 
     // Extract main building blocks of context class AST =======================================
 
     val (ctxModifiers, ctxName, ctxTypeDefs, ctxTemplate) = annottees.head.tree match {
-//      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(TRAIT)    => abort("Using a trait as a DCI context is not allowed")
-//      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(ABSTRACT) => abort("Using abstract class as a DCI context is not allowed")
-      case t@ClassDef(mods, name, tpeDefs, tmpl)              => (mods, name, tpeDefs, tmpl)
-      case t@ModuleDef(mods, name, tmpl)                      => (mods, name, Nil, tmpl)
-      case tree                                               => abort("Only classes/case classes/objects can be transformed to DCI Contexts. Found:\n" + tree)
+      //      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(TRAIT)    => abort("Using a trait as a DCI context is not allowed")
+      //      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(ABSTRACT) => abort("Using abstract class as a DCI context is not allowed")
+      case t@ClassDef(mods, name, tpeDefs, tmpl) => (mods, name, tpeDefs, tmpl)
+      case t@ModuleDef(mods, name, tmpl)         => (mods, name, Nil, tmpl)
+      case tree                                  => abort("Only classes/case classes/objects can be transformed to DCI Contexts. Found:\n" + tree)
     }
 
     case class abortNestedContextDefinitions(ctxName: NameApi) extends Transformer {
@@ -82,7 +84,7 @@ object ContextTransformer {
         // Disallow `this` in role method body
         case thisRoleMethodRef@Select(This(typeNames.EMPTY), TermName(methodName)) =>
           abort("`this` in a role method points to the Context which is unintentional from a DCI perspective (where it would normally point to the RolePlayer).\n" +
-//          abort("`this` in a role method points to the Context and is not allowed in a DCI Context.\n" +
+            //          abort("`this` in a role method points to the Context and is not allowed in a DCI Context.\n" +
             "Please access Context members directly if needed or use `self` to reference the Role Player.")
           EmptyTree
 
@@ -138,7 +140,7 @@ object ContextTransformer {
 
           // Build role method AST
           val newRoleMethod = DefDef(Modifiers(PRIVATE), newRoleMethodName, x2, x3, x4, newRoleMethodBody)
-          //                    comp(roleMethod, newRoleMethod)
+          //          comp(roleMethod, newRoleMethod)
           newRoleMethod
         }
 

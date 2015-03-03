@@ -1,61 +1,61 @@
 package scaladci
 package semantics
-import util._
 import scala.language.reflectiveCalls
+import scaladci.util._
 
-  /*
-  Role contracts (or "Role-object contracts")
+/*
+Role contracts (or "Role-object contracts")
 
-  For an object to play a Role it needs to satisfy a Role contract that defines
-  what methods the Role expect it to have before they can merge to a Role player.
-  We call those methods in the object class "instance methods".
+For an object to play a Role it needs to satisfy a Role contract that defines
+what methods the Role expect it to have before they can merge to a Role player.
+We call those methods in the object class "instance methods".
 
-  When our Role players start to interact at runtime they will call these methods
-  on each other. To maximise our ability to reason about the expected outcome of
-  those interactions we therefore need to know what the instance methods do too
-  to various extends depending on their nature (we don't need to lookup what
-  `toString` does for instance).
-
-
-  Types - precise but not a silver bullet always...
-
-  One way to know the object's methods is of course to know the objects type.
-  We can look at the method definition in the defining class (the objects type)
-  and see what it does.
-
-  But what if we get an object that is a subtype of the type we have defined
-  in our Role contract? The method could have been overriden and now do nasty
-  things that would give us nasty surprises once we run our program.
-
-  Fortunately we can enforce an even more specific type equalling the expected
-  type (avoiding subclasses thereof). But even that specific type might in turn
-  depend on other classes that could have been subclasses and so on. That seems
-  to suggest that we will never be able to reason with 100% certainty about
-  the outcome of our program at runtime - unless we define all object classes
-  ourselves.
+When our Role players start to interact at runtime they will call these methods
+on each other. To maximise our ability to reason about the expected outcome of
+those interactions we therefore need to know what the instance methods do too
+to various extends depending on their nature (we don't need to lookup what
+`toString` does for instance).
 
 
-  Structural types (duck typing) - flexible but unpredictable...
+Types - precise but not a silver bullet always...
 
-  When a Role is more flexible and wants to allow a broader set of objects
-  to be able to play it, then a structural type (a la duck-typing) will come
-  in handy. The role contract would then define what method signature(s) a
-  Role expects. The backside of that coin is of course that we would know
-  much less about what those methods do.
+One way to know the object's methods is of course to know the objects type.
+We can look at the method definition in the defining class (the objects type)
+and see what it does.
+
+But what if we get an object that is a subtype of the type we have defined
+in our Role contract? The method could have been overriden and now do nasty
+things that would give us nasty surprises once we run our program.
+
+Fortunately we can enforce an even more specific type equalling the expected
+type (avoiding subclasses thereof). But even that specific type might in turn
+depend on other classes that could have been subclasses and so on. That seems
+to suggest that we will never be able to reason with 100% certainty about
+the outcome of our program at runtime - unless we define all object classes
+ourselves.
 
 
-  Levels of predictability:
+Structural types (duck typing) - flexible but unpredictable...
 
-  1) One and only type (enforced with type equality)
-  2) Type (could be any subtype too)
-  3) Structural type (duck-typing)
+When a Role is more flexible and wants to allow a broader set of objects
+to be able to play it, then a structural type (a la duck-typing) will come
+in handy. The role contract would then define what method signature(s) a
+Role expects. The backside of that coin is of course that we would know
+much less about what those methods do.
 
- */
+
+Levels of predictability:
+
+1) One and only type (enforced with type equality)
+2) Type (could be any subtype too)
+3) Structural type (duck-typing)
+
+*/
 
 class RoleContract extends DCIspecification {
 
 
-  /******** Type **************************************************************/
+  /** ****** Type **************************************************************/
 
 
   "Can be a type" >> {
@@ -96,43 +96,41 @@ class RoleContract extends DCIspecification {
   }
 
 
-//  "Can rely more safely on a specific type" >> {
-//
-//    class ExpectedType(i: Int) {
-//      def number = i
-//    }
-//    class DodgySubClass(i: Int) extends ExpectedType(i) {
-//      override def number = -666
-//    }
-//
-//    @context
-////    case class Context[T](MyRole: T)(implicit ev: T =:= ExpectedType) { // <- enforce only this type
-//    class Context[T](MyRole: T)(implicit ev: T =:= ExpectedType) { // <- enforce only this type
-//
-//      def trigger = MyRole.foo
-//
-//      role MyRole {
-//        def foo = self.number
-//      }
-//    }
-//
-//    // A dodgy subclass can't sneak in
-//    expectCompileError(
-//      """
-//        val devilInDisguise = new DodgySubClass(42)
-//        Context(devilInDisguise).trigger === 42
-//      """,
-//      "Cannot prove that DodgySubClass =:= ExpectedType")
-//
-//
-//    // Only objects of our expected type (and no subtype) can be used:
-//    val expectedObject = new ExpectedType(42)
-////    Context(expectedObject).trigger === 42
-//    new Context(expectedObject).trigger === 42
-//  }
+  "Can rely more safely on a specific type" >> {
+
+    class ExpectedType(i: Int) {
+      def number = i
+    }
+    class DodgySubClass(i: Int) extends ExpectedType(i) {
+      override def number = -666
+    }
+
+    // Implicit type evidence enforces a strict type (no subtype allowed)
+    @context
+    case class Context[T](MyRole: T)(implicit val ev: T =:= ExpectedType) {
+
+      def trigger = MyRole.foo
+
+      role MyRole {
+        def foo = self.number
+      }
+    }
+
+    // A dodgy subclass can't sneak in
+    expectCompileError(
+      """
+        val devilInDisguise = new DodgySubClass(42)
+        Context(devilInDisguise).trigger === 42
+      """,
+      "Cannot prove that DodgySubClass =:= ExpectedType")
+
+    // Only objects of our expected type (and no subtype) can be used:
+    val expectedObject = new ExpectedType(42)
+    Context(expectedObject).trigger === 42
+  }
 
 
-  /******** Structural Type (duck typing) **************************************************/
+  /** ****** Structural Type (duck typing) **************************************************/
 
 
   "Can be a structural type (duck typing)" >> {
@@ -253,8 +251,7 @@ class RoleContract extends DCIspecification {
   }
 
 
-
-  /******** Mix of types and duck typing **************************************************/
+  /** ****** Mix of types and duck typing **************************************************/
 
   "Can be a mix of a type and a structural type" >> {
 
@@ -276,5 +273,4 @@ class RoleContract extends DCIspecification {
     }
     Context(OtherData(42)).trigger === "My number is: 42"
   }
-
 }
