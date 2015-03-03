@@ -264,7 +264,7 @@ To start coding with DCI in Scala add the following to your SBT build file:
     libraryDependencies ++= Seq(
       "org.scaladci" % "scaladci_2.11.6" % "0.5.2"
     ),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M6" cross CrossVersion.full)
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
 
 
 ## Building Scala DCI
