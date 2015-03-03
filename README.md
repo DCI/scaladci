@@ -262,7 +262,7 @@ ScalaDCI is available for Scala 2.11.6 at [Sonatype](https://oss.sonatype.org/co
 To start coding with DCI in Scala add the following to your SBT build file:
 
     libraryDependencies ++= Seq(
-      "org.scaladci" % "scaladci_2.11.6" % "0.5.2"
+      "org.scaladci" %% "scaladci" % "0.5.2"
     ),
     addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
 
