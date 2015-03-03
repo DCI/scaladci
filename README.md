@@ -252,7 +252,7 @@ which is not the intention and result after source code transformation.
 
 ## Scala DCI demo application
 
-In the [Scala DCI Demo App](https://github.com/DCI/scaladci/tree/master/demo) you can see an example of 
+In the [Scala DCI Demo App](https://github.com/DCI/scaladci-demo) you can see an example of
 how to create a DCI project.
 
 
