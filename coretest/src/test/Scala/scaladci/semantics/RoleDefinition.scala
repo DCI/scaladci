@@ -16,7 +16,7 @@ class RoleDefinition extends DCIspecification {
         @context
         class Context(MyRole: Data) {
           def subLevel() {
-            role MyRole ()
+            role MyRole (()) // Supplying Unit argument as `()`
           }
         }
       """,
@@ -101,8 +101,18 @@ class RoleDefinition extends DCIspecification {
       """
         @context
         class Context(MyRole: Data) {
-          role(MyRole)()
-          role(MyRole)()
+          role(MyRole)(())
+          role(MyRole)(())
+        }
+      """,
+      "Can't define role `MyRole` twice")
+
+    expectCompileError(
+      """
+        @context
+        class Context(MyRole: Data) {
+          role(MyRole){}
+          role(MyRole){}
         }
       """,
       "Can't define role `MyRole` twice")
@@ -112,7 +122,7 @@ class RoleDefinition extends DCIspecification {
         @context
         class Context(MyRole: Data) {
           role MyRole {}
-          role(MyRole)()
+          role(MyRole){}
         }
       """,
       "Can't define role `MyRole` twice")
