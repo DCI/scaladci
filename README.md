@@ -126,7 +126,22 @@ As an alternative to using the Role name to reference a Role Player we can also 
     }
   }
 ```
-Using `self` doesn't change how Role methods take precedence over instance methods.
+or `this`:
+```Scala
+  role source {
+    def withdraw {
+      this.decreaseBalance(amount)
+      destination.deposit
+    }
+  }
+
+  role destination {
+    def deposit {
+      this.increaseBalance(amount)
+    }
+  }
+```
+Using `self` or `this` doesn't change how Role methods take precedence over instance methods.
 
 
 ## Multiple roles
@@ -162,7 +177,7 @@ class MyContext(someRole: MyData) {
 ```
 As you see in line 3, otherRole is simply a reference pointing to the MyData instance (named someRole).
 
-Inside each role definition we can still use `self`.
+Inside each role definition we can still use `self`/`this`.
 
 We can add as many references/role definitions as we want. This is a way to 
 allow different Roles of a Use Case each to have their own meaningful namespace for defining their 

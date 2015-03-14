@@ -38,29 +38,19 @@ class RoleReference extends DCIspecification {
   }
 
 
-  "Cannot be `this` (not Scala ideomatic)" >> {
+  "Can be `this`" >> {
 
-    // According to Scala semantics, `this` in the example below is pointing to the
-    // Context instance. It would be confusing to let it point to the Role Player and
-    // since we can access the Context members anyway without it, we disallow using it
-    // inside a DCI context:
+    @context
+    case class Context(myRole: Data) {
+      def useSelf = myRole.value
 
-    expectCompileError(
-      """
-        @context
-        case class Context(myRole: Data) {
-          def useThis = myRole.value
+      role myRole {
+        def value = this.i * 2
+      }
+    }
 
-          role myRole {
-            def value = this.i * 2
-          }
-        }
-      """,
-      """
-        |`this` in a role method points to the Context which is unintentional from a DCI perspective (where it would normally point to the RolePlayer).
-        |Please access Context members directly if needed or use `self` to reference the Role Player.
-      """)
+    val obj = Data(42)
 
-    success
+    Context(obj).useSelf === 42 * 2
   }
 }

@@ -12,12 +12,6 @@ class context extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro ContextTransformer.transform
 }
 
-// Imitating "use case" with a case class Context:
-// `@use case class Context` ...
-class use extends StaticAnnotation {
-  def macroTransform(annottees: Any*): Any = macro ContextTransformer.transform
-}
-
 
 // AST transformation ///////////////////////////////////////////////////////
 
@@ -76,26 +70,26 @@ object ContextTransformer {
           //          comp(roleMethodRef, newRoleMethodRef)
           newRoleMethodRef
 
-        // Disallow `this` in role method body
-        case thisRoleMethodRef@Select(This(typeNames.EMPTY), TermName(methodName)) =>
-          abort("`this` in a role method points to the Context which is unintentional from a DCI perspective (where it would normally point to the RolePlayer).\n" +
-            //          abort("`this` in a role method points to the Context and is not allowed in a DCI Context.\n" +
-            "Please access Context members directly if needed or use `self` to reference the Role Player.")
-          EmptyTree
+        //        // Disallow `this` in role method body
+        //        case thisRoleMethodRef@Select(This(typeNames.EMPTY), TermName(methodName)) =>
+        //          abort("`this` in a role method points to the Context which is unintentional from a DCI perspective (where it would normally point to the RolePlayer).\n" +
+        //            //          abort("`this` in a role method points to the Context and is not allowed in a DCI Context.\n" +
+        //            "Please access Context members directly if needed or use `self` to reference the Role Player.")
+        //          EmptyTree
 
-        //        // Allow `this` in role method body
-        //        case thisRoleMethodRef@Apply(Select(This(tpnme.EMPTY), methodName), List(params))
-        //          if ctx.isRoleMethod(roleName, methodName.toString) =>
-        //          val newMethodRef = Apply(Ident(TermName(roleName + "_" + methodName.toString)), List(params))
-        //          //          comp(thisRoleMethodRef, newMethodRef)
-        //          newMethodRef
-        //
-        //        // this.instanceMethod(params..) => RoleName.instanceMethod(params..)
-        //        // this.instanceMethod() => RoleName.instanceMethod()
-        //        // this.instanceMethod => RoleName.instanceMethod
-        //        // someMethod(this) => someMethod(RoleName)
-        //        // possibly other uses?...
-        //        case This(tpnme.EMPTY) => Ident(TermName(roleName))
+        // Allow `this` in role method body
+        case thisRoleMethodRef@Apply(Select(This(typeNames.EMPTY), methodName), List(params))
+          if ctx.isRoleMethod(roleName, methodName.toString) =>
+          val newMethodRef = Apply(Ident(TermName(roleName + "_" + methodName.toString)), List(params))
+          //          comp(thisRoleMethodRef, newMethodRef)
+          newMethodRef
+
+        // this.instanceMethod(params..) => RoleName.instanceMethod(params..)
+        // this.instanceMethod() => RoleName.instanceMethod()
+        // this.instanceMethod => RoleName.instanceMethod
+        // someMethod(this) => someMethod(RoleName)
+        // possibly other uses?...
+        case This(typeNames.EMPTY) => Ident(TermName(roleName))
 
 
         // self.roleMethod(params..) => RoleName_roleMethod(params..)

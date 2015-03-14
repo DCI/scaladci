@@ -74,6 +74,37 @@ class MoneyTransfer1 extends Specification {
 
 
   /*
+    Using `this` as reference to the Role Player - `this.decreaseBalance(amount)`
+    ATTENTION:
+    Using `this` inside a role definition will reference the role-playing object (and not the Context)!
+  */
+  @context
+  case class MoneyTransfer_this(source: Account, destination: Account, amount: Int) {
+
+    source.withdraw
+
+    role source {
+      def withdraw {
+        this.decreaseBalance(amount)
+        destination.deposit
+      }
+    }
+
+    role destination {
+      def deposit {
+        // role method takes precedence over instance method
+        this.increaseBalance(amount)
+      }
+      // Overriding an instance method - this role method takes precedence
+      def increaseBalance(amount: Int) {
+        val bonus = 10
+        this.balance += amount + bonus
+      }
+    }
+  }
+
+
+  /*
     Alternative role definition syntax where the data instance is supplied as an
     argument to a `role` method.
 
