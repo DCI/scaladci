@@ -61,11 +61,11 @@ class RoleContract extends DCIspecification {
   "Can be a type" >> {
 
     @context
-    case class Context(MyRole: Data) {
+    case class Context(myRole: Data) {
 
-      def trigger = MyRole.foo
+      def trigger = myRole.foo
 
-      role MyRole {
+      role myRole {
         def foo = self.number // We know type `Data` (and that it has a number method)
       }
     }
@@ -83,11 +83,11 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class Context(MyRole: Data) { // <- We feel falsely safe :-(
+    case class Context(myRole: Data) { // <- We feel falsely safe :-(
 
-      def trigger = MyRole.foo
+      def trigger = myRole.foo
 
-      role MyRole {
+      role myRole {
         def foo = self.number
       }
     }
@@ -107,11 +107,11 @@ class RoleContract extends DCIspecification {
 
     // Implicit type evidence enforces a strict type (no subtype allowed)
     @context
-    case class Context[T](MyRole: T)(implicit val ev: T =:= ExpectedType) {
+    case class Context[T](myRole: T)(implicit val ev: T =:= ExpectedType) {
 
-      def trigger = MyRole.foo
+      def trigger = myRole.foo
 
-      role MyRole {
+      role myRole {
         def foo = self.number
       }
     }
@@ -136,11 +136,12 @@ class RoleContract extends DCIspecification {
   "Can be a structural type (duck typing)" >> {
 
     @context
-    case class Context(MyRole: {def number: Int}) {
+    case class Context(myRole: {def number: Int}) {
 
-      def trigger = MyRole.foo
 
-      role MyRole {
+      def trigger = myRole.foo
+
+      role myRole {
         // We know that the instance (of unknown type) has a `number` method returning Int
         def foo = self.number
       }
@@ -156,11 +157,11 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class NaiveContext(MyRole: {def number: Int}) {
+    case class NaiveContext(myRole: {def number: Int}) {
 
-      def trigger = MyRole.foo
+      def trigger = myRole.foo
 
-      role MyRole {
+      role myRole {
         // We know that the instance (of unknown type) has a `number` method returning Int
         // - but we don't know that it also fire off missiles!!!
         def foo = self.number
@@ -182,13 +183,13 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class Disco(Visitor: {
+    case class Disco(visitor: {
       def age: Int
       def name: String}) {
 
-      def letMeDance = Visitor.canIGetIn
+      def letMeDance = visitor.canIGetIn
 
-      role Visitor {
+      role visitor {
         def canIGetIn = {
           if (self.age < 18)
             s"Sorry, ${self.name}, you're only ${self.age} years old. I can't let you in."
@@ -224,11 +225,11 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class Context(MyRole: Data {def text: String}) {
+    case class Context(myRole: Data {def text: String}) {
 
-      def trigger = MyRole.bar
+      def trigger = myRole.bar
 
-      role MyRole {
+      role myRole {
         def bar = {
           val result = if (self.foo) "Yes!" else "No!"
           val status = self.text + result
@@ -263,11 +264,11 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class Context(MyRole: Data {def text: String}) { // <- OtherData will satisfy this contract
+    case class Context(myRole: Data {def text: String}) { // <- OtherData will satisfy this contract
 
-      def trigger = MyRole.foo
+      def trigger = myRole.foo
 
-      role MyRole {
+      role myRole {
         def foo = self.text + self.number // `Data` has a `number` method and there should also be some `text` method...
       }
     }

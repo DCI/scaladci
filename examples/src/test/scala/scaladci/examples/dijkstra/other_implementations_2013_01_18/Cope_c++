@@ -78,7 +78,7 @@ public:
     //	CalculateShortestPathRoles::CurrentIntersection (@current)
     //	EastNeighbor, which lies DIRECTLY to the east of CalculateShortestPathRoles::CurrentIntersection (@east_neighbor)
     //	SouthernNeighbor, which is DIRECTLY to its south (@south_neighbor)
-    //	Destination, the target node (@destination)
+    //	destination, the target node (@destination)
     //
     //	We also add a role of Map (@map) as the oracle for the geometry
     //
@@ -463,7 +463,7 @@ public:
     {
         rebind(origin_node, geometries);
 
-        CalculateShortestPath<Geometry, NodeType> pathå  (origin_node, target_node, geometries);
+        CalculateShortestPath<Geometry, NodeType> pathï¿½  (origin_node, target_node, geometries);
         path_ = path.path();
     }
 

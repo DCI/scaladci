@@ -65,7 +65,7 @@ For one, I see 3 different "kinds" of role aspirants with different basic charac
 "Provider roles" that merely provide data to acting and housekeeping roles:
 - Graph
 - Initial Node
-- Destination Node
+- destination Node
 
 Since we will iterate through the graph of nodes to calculate the shortest path to a specific node, we'll
 examine each node one by one. So nodes will switch between playing the CurrentNode and NeighBorNode roles
@@ -139,7 +139,7 @@ Housekeeping roles
 Provider roles
 - City Map
 - Starting Point
-- Destination
+- destination
 
 Data structures
 - Intersection
@@ -200,8 +200,8 @@ Bob would also rather say "Route" than "Path" to describe how to get from A to B
 
 Somehow it seems strange also to say that we have "visited" an Intersection once we have considered its
 neighboring intersections. If we instead think of Bob as a pessimistic guy that consider all combinations
-of intersections as Detours until he has checked that a certain Intersection is not, then we could use
-"Detours" to contain all Intersections that have not yet been considered.
+of intersections as detours until he has checked that a certain Intersection is not, then we could use
+"detours" to contain all Intersections that have not yet been considered.
 
 The shortest route from A to B can be viewed as a shortcut. Following the best shortcuts gives us the
 shortest route to our destination (and Bob is not thinking of keyboard shortcuts).
@@ -215,14 +215,14 @@ Acting roles:
   - South intersection
 
 Housekeeping roles:
-- Detours (set of yet unconsidered intersections)
+- detours (set of yet unconsidered intersections)
 - Tentative distances
 - Shortcuts
 
 Provider roles:
 - City
 - Starting point
-- Destination
+- destination
 
 Data structures:
 - City
@@ -234,7 +234,7 @@ Data structures:
 
 Let's update the algorithm to reflect our new specialized mental model of route planning in New York. Since
 we are not doing a complete traversal, step 5 can be simplified and since we determine whether an Intersection
-has been visited/considered not by marking it, but by checking it is in the Detours set, we can also simplify
+has been visited/considered not by marking it, but by checking it is in the detours set, we can also simplify
 those parts. We end up with:
 
 

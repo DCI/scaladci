@@ -6,8 +6,8 @@ class RoleAsKeyword extends DCIspecification {
 
   "Can define implemented Roles" >> {
 
-    @context class Context(MyRole: Data) {
-      role MyRole {
+    @context class Context(myRole: Data) {
+      role myRole {
         def roleMethod = 42
       }
     }
@@ -18,16 +18,16 @@ class RoleAsKeyword extends DCIspecification {
 
   "Can define methodless Roles" >> {
 
-    @context class Context1(MyRole: Data) {
-      role MyRole()
+    @context class Context1(myRole: Data) {
+      role myRole()
     }
 
-    @context class Context2(MyRole: Data) {
-      role.MyRole()
+    @context class Context2(myRole: Data) {
+      role.myRole()
     }
 
-    @context class Context3(MyRole: Data) {
-      role MyRole {}
+    @context class Context3(myRole: Data) {
+      role myRole {}
     }
 
     success
@@ -37,12 +37,12 @@ class RoleAsKeyword extends DCIspecification {
   "Can only define Roles" >> {
 
     @context
-    class ContextWithOkRoleUse(MyRole: Data) {
-      role MyRole {}
+    class ContextWithOkRoleUse(myRole: Data) {
+      role myRole {}
     }
 
     // Rejected uses of `role` keyword
-    //    @context class Context(MyRole: Data) {role =>
+    //    @context class Context(myRole: Data) {role =>
     //
     //      val value = role
     //      var value = role
@@ -60,7 +60,7 @@ class RoleAsKeyword extends DCIspecification {
     //      type role
     //
     //      val x = this.role
-    //      role.MyRole
+    //      role.myRole
     //    }
 
     expectCompileError(
@@ -183,7 +183,7 @@ class RoleAsKeyword extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(MyRole: Data) {
+        class Context(myRole: Data) {
           role
         }
       """,
@@ -198,31 +198,31 @@ class RoleAsKeyword extends DCIspecification {
     expectCompileError(
       """
         @context
-        class Context(MyRole: Data) {
-          role MyRole
+        class Context(myRole: Data) {
+          role myRole
         }
       """,
-      "(1) To avoid postfix clashes, please write `role MyRole {}` instead of `role MyRole`")
+      "(1) To avoid postfix clashes, please write `role myRole {}` instead of `role myRole`")
 
     @context
-    class Context1(MyRole: Data) {
-      role MyRole {} // with body
+    class Context1(myRole: Data) {
+      role myRole {} // with body
     }
 
     expectCompileError(
       """
         @context
-        class Context(RoleA: Data, RoleB: Data) {
-          role RoleA // two lines after each other ...
-          role RoleB // ... would unintentionally become `role.RoleA(role).RoleB`
+        class Context(roleA: Data, roleB: Data) {
+          role roleA // two lines after each other ...
+          role roleB // ... would unintentionally become `role.roleA(role).roleB`
         }
       """,
-      "(2) To avoid postfix clashes, please write `role RoleA {}` instead of `role RoleA`")
+      "(2) To avoid postfix clashes, please write `role roleA {}` instead of `role roleA`")
 
     @context
-    class Context2(RoleA: Data, RoleB: Data) {
-      role RoleA {}
-      role RoleB {}
+    class Context2(roleA: Data, roleB: Data) {
+      role roleA {}
+      role roleB {}
     }
 
     success

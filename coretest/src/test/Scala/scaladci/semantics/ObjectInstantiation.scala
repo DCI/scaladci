@@ -7,12 +7,12 @@ class ObjectInstantiation extends DCIspecification {
   "In environment (passed to Context)" >> {
 
     @context
-    case class Context(MyRole: Data) {
+    case class Context(myRole: Data) {
 
-      def trigger = MyRole.foo
+      def trigger = myRole.foo
 
-      role MyRole {
-        def foo = MyRole.i * 2
+      role myRole {
+        def foo = myRole.i * 2
       }
     }
 
@@ -26,12 +26,12 @@ class ObjectInstantiation extends DCIspecification {
     @context
     case class Context(i: Int) {
 
-      val MyRole = Data(i)
+      val myRole = Data(i)
 
-      def trigger = MyRole.foo
+      def trigger = myRole.foo
 
-      role MyRole {
-        def foo = MyRole.i * 2
+      role myRole {
+        def foo = myRole.i * 2
       }
     }
 
@@ -42,14 +42,14 @@ class ObjectInstantiation extends DCIspecification {
   "As new variable referencing already instantiated object/RolePlayer" >> {
 
     @context
-    case class Context(RoleA: Data) {
+    case class Context(roleA: Data) {
 
-      val RoleB = RoleA
+      val roleB = roleA
 
-      def trigger = RoleB.bar
+      def trigger = roleB.bar
 
-      role RoleB {
-        def bar = RoleB.i * 2
+      role roleB {
+        def bar = roleB.i * 2
       }
     }
 

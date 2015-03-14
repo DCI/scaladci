@@ -30,9 +30,9 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
   case class rejectNestedRoleDefinitions(tree0: Tree) extends Transformer {
     def err(msg: String, i: Int = 0) = abortRoleUse(tree0, msg, i)
     override def transform(tree: Tree): Tree = tree match {
-      case Apply(Select(Ident(TermName("role")), _), _) /* role Foo {...} */ => err("on a sub level of the Context", 1)
-      case Apply(Ident(TermName("role")), _) /*            role(Foo)      */ => err("on a sub level of the Context", 2)
-      case Apply(Apply(Ident(TermName("role")), _), _) /*  role(Foo){...} */ => err("on a sub level of the Context", 3)
+      case Apply(Select(Ident(TermName("role")), _), _) /* role foo {...} */ => err("on a sub level of the Context", 1)
+      case Apply(Ident(TermName("role")), _) /*            role(foo)      */ => err("on a sub level of the Context", 2)
+      case Apply(Apply(Ident(TermName("role")), _), _) /*  role(foo){...} */ => err("on a sub level of the Context", 3)
       case Select(Ident(TermName("role")), roleName)                         => err("on a sub level of the Context", 4)
       case Apply(Ident(TermName("role")), List())                            => err("without a Role name", 1)
       case Apply(Ident(TermName("role")), List(Literal(Constant(_))))        => err("without a Role name", 2)
@@ -87,18 +87,18 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
 
       ///////// `role` as keyword /////////
 
-      // role Foo
+      // role foo
       case t@Select(Ident(TermName("role")), roleName) =>
         abort(s"(1) To avoid postfix clashes, please write `role $roleName {}` instead of `role $roleName`")
 
       /*
-        role Foo // two lines after each other ...
-        role Bar // ... unintentionally becomes `role.Foo(role).Bar`
+        role foo // two lines after each other ...
+        role bar // ... unintentionally becomes `role.foo(role).bar`
       */
       case t@Select(Apply(Select(Ident(TermName("role")), roleName), List(Ident(TermName("role")))), roleName2) =>
         abort(s"(2) To avoid postfix clashes, please write `role $roleName {}` instead of `role $roleName`")
 
-      // role Foo = {...}
+      // role foo = {...}
       case t@Assign(Select(Ident(TermName("role")), roleName), _) => rejectRoleBodyAssignment(roleName, 1)
 
       // role
@@ -107,7 +107,7 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
 
       ///////// `role` as method /////////
 
-      // role("Foo")
+      // role("foo")
       // role(42)
       // role(42.0)
       // role(42f)
@@ -131,7 +131,7 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
       case Apply(Apply(Ident(TermName("role")), List(Literal(Constant(_)))), List())                     => abort(missingRoleName, 6)
       case Apply(Apply(Ident(TermName("role")), List(Literal(Constant(_)))), List(Literal(Constant(_)))) => abort(missingRoleName, 7)
 
-      // role(Foo) = {...}
+      // role(foo) = {...}
       // role() = {...}
       case t@Apply(Select(Ident(TermName("role")), TermName("update")), List(Ident(roleName), _)) => rejectRoleBodyAssignment(roleName, 2)
       case t@Apply(Select(Ident(TermName("role")), TermName("update")), _)                        => abort(missingRoleName, 8)
@@ -141,32 +141,32 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
 
       ///////// `role` as keyword /////////
 
-      // role Foo {...}
+      // role foo {...}
       case t@Apply(Select(Ident(TermName("role")), roleName), List(Block(roleBody, returnValue))) =>
         roleBody.foreach(t => rejectNestedRoleDefinitions(t).transform(t))
         rejectReturnValue(roleName, returnValue, t)
         Some(verifiedRoleName(roleName, 1) -> roleMethods(roleName, roleBody))
 
       // Methodless role
-      // `role Foo()` or `role Foo {}`
+      // `role foo()` or `role foo {}`
       case t@Apply(Select(Ident(TermName("role")), roleName), _) =>
         Some(verifiedRoleName(roleName, 2) -> Nil)
 
 
       ///////// `role` as method /////////
 
-      // role(Foo) {...}
+      // role(foo) {...}
       case t@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(roleBody, returnValue))) =>
         roleBody.foreach(t => rejectNestedRoleDefinitions(t).transform(t))
         rejectReturnValue(roleName, returnValue, t)
         Some(verifiedRoleName(roleName, 3) -> roleMethods(roleName, roleBody))
 
       // Methodless roles
-      // `role(Foo)()` or `role(Foo){}`
+      // `role(foo)()` or `role(foo){}`
       case t@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), _) =>
         Some(verifiedRoleName(roleName, 4) -> Nil)
 
-      // role(Foo)
+      // role(foo)
       case t@Apply(Ident(TermName("role")), List(Ident(roleName))) =>
         Some(verifiedRoleName(roleName, 5) -> Nil)
 

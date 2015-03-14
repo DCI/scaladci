@@ -5,10 +5,10 @@ import org.specs2.mutable.Specification
 /*
 Shopping cart example (version 4a) - removing more roles
 
-Removed the DesiredProduct role. It feels too technically motivated (to avoid passing
+Removed the desiredProduct role. It feels too technically motivated (to avoid passing
 the marked product id around) and not 100% as a justified role of a mental model.
 
-Absorbed the Warehouse role responsibilities into the Customer role.
+Absorbed the warehouse role responsibilities into the customer role.
 
 See discussion at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
@@ -20,13 +20,13 @@ Person browsing around finds product(s) in a web shop that he/she wants to buy.
 
 Primary actor.. Web customer ("Customer")
 Scope.......... Web shop ("Shop")
-Preconditions.. Shop presents product(s) to Customer
+Preconditions.. Shop presents product(s) to customer
 Trigger........ Customer wants to buy certain product(s)
 
 Main Success Scenario
 ---------------------------------------------------------------------------
 1. Customer marks Desired Product in Shop
-    - System confirms product availability
+    - System confirms Product availability
     - System adds Item to Order (can repeat from step 1)
     - UI shows updated contents of Cart to Customer
 2. Customer requests to review Order
@@ -42,11 +42,11 @@ Deviations
     1. UI informs Customer that Product is out of stock.
 
 1b. Customer has gold membership:
-    1. System adds discounted product to Order.
+    1. System adds discounted Product to Order.
 
 3a. Customer has insufficient funds to pay Order:
     1. UI informs Customer of insufficient funds.
-        a. Customer removes unaffordable item(s) from Cart:
+        a. Customer removes unaffordable Item(s) from Cart:
             1. Go to step 3.
 ===========================================================================
 */
@@ -55,67 +55,67 @@ class ShoppingCart4a extends Specification {
   import ShoppingCartModel._
 
   @context
-  class PlaceOrder(Shop: Company, Customer: Person) {
+  class PlaceOrder(shop: Company, customer: Person) {
 
     // UC steps
-    def customerMarksDesiredProductInShop(productId: Int): Option[Product] =
-      Customer.markDesiredProductInShop(productId)
+    def customerMarksdesiredProductInshop(productId: Int): Option[Product] =
+      customer.markdesiredProductInshop(productId)
     def customerRequestsToReviewOrder: Seq[(Int, Product)] =
-      Customer.reviewOrder
+      customer.reviewOrder
     def customerPaysOrder: Boolean =
-      Customer.payOrder
+      customer.payOrder
 
     // Deviation(s)
-    def customerRemovesProductFromCart(productId: Int): Option[Product] =
-      Customer.removeProductFromCart(productId)
+    def customerRemovesProductFromcart(productId: Int): Option[Product] =
+      customer.removeProductFromcart(productId)
 
     // Roles
-    role Customer {
-      def markDesiredProductInShop(productId: Int): Option[Product] = {
-        if (!Shop.stock.isDefinedAt(productId))
+    role customer {
+      def markdesiredProductInshop(productId: Int): Option[Product] = {
+        if (!shop.stock.isDefinedAt(productId))
           return None
-        val product = Shop.stock(productId)
-        val discountedPrice = Customer.getMemberPriceOf(product)
+        val product = shop.stock(productId)
+        val discountedPrice = customer.getMemberPriceOf(product)
         val desiredProduct = product.copy(price = discountedPrice)
-        Cart.addItem(productId, desiredProduct)
+        cart.addItem(productId, desiredProduct)
         Some(desiredProduct)
       }
-      def reviewOrder = Cart.getItems
-      def removeProductFromCart(productId: Int) = Cart.removeItem(productId: Int)
+      def reviewOrder = cart.getItems
+      def removeProductFromcart(productId: Int) = cart.removeItem(productId: Int)
       def payOrder: Boolean = {
-        val orderTotal = Cart.total
-        if (orderTotal > Customer.cash)
+        val orderTotal = cart.total
+        if (orderTotal > customer.cash)
           return false
 
-        Customer.cash -= orderTotal
-        Shop.cash += orderTotal
+        customer.cash -= orderTotal
+        shop.cash += orderTotal
 
-        Customer.owns ++= Cart.items
-        Cart.items foreach (Shop.stock remove _._1)
+        customer.owns ++= cart.items
+        cart.items foreach (shop.stock remove _._1)
         true
       }
 
       def getMemberPriceOf(product: Product) = {
-        val customerIsGoldMember = Shop.goldMembers.contains(Customer)
+        val customerIsGoldMember = shop.goldMembers.contains(customer)
         val goldMemberReduction = 0.5
         val discountFactor = if (customerIsGoldMember) goldMemberReduction else 1
         (product.price * discountFactor).toInt
       }
     }
 
-    private val Cart = Order(Customer)
+    private val cart = Order(customer)
 
-    role Cart {
+    role cart {
       def addItem(productId: Int, product: Product) {
-        Cart.items.put(productId, product)
+        cart.items.put(productId, product)
       }
       def removeItem(productId: Int): Option[Product] = {
-        if (!Cart.items.isDefinedAt(productId))
+        if (!cart.items.isDefinedAt(productId))
           return None
-        Cart.items.remove(productId)
+        cart.items.remove(productId)
       }
-      def getItems = Cart.items.toIndexedSeq.sortBy(_._1)
-      def total = Cart.items.map(_._2.price).sum
+      def getItems = cart.items.toIndexedSeq.sortBy(_._1)
+      def total = cart.items.map(_._2.price).sum
     }
   }
 
@@ -123,7 +123,7 @@ class ShoppingCart4a extends Specification {
   // Test various scenarios.
   // (copy and paste of ShoppingCart2/3 tests)
 
-  "Main success scenario" in new shoppingCart {
+  "Main success scenario" in new ShoppingCart {
 
     // Initial status (same for all tests...)
     shop.stock === Map(tires, wax, bmw)
@@ -133,9 +133,9 @@ class ShoppingCart4a extends Specification {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants wax and tires
-    order.customerMarksDesiredProductInShop(p1)
-    order.customerMarksDesiredProductInShop(p2)
+    // customer wants wax and tires
+    order.customerMarksdesiredProductInshop(p1)
+    order.customerMarksdesiredProductInshop(p2)
 
     order.customerRequestsToReviewOrder === Seq(wax, tires)
 
@@ -147,7 +147,7 @@ class ShoppingCart4a extends Specification {
     customer.owns === Map(tires, wax)
   }
 
-  "Product out of stock" in new shoppingCart {
+  "Product out of stock" in new ShoppingCart {
 
     // Wax out of stock
     shop.stock.remove(p1)
@@ -155,11 +155,11 @@ class ShoppingCart4a extends Specification {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants wax
-    val itemAdded = order.customerMarksDesiredProductInShop(p1) === None
+    // customer wants wax
+    val itemAdded = order.customerMarksdesiredProductInshop(p1) === None
     order.customerRequestsToReviewOrder === Seq()
 
-    order.customerMarksDesiredProductInShop(p2)
+    order.customerMarksdesiredProductInshop(p2)
 
     val orderCompleted = order.customerPaysOrder === true
 
@@ -169,15 +169,15 @@ class ShoppingCart4a extends Specification {
     customer.owns === Map(tires)
   }
 
-  "Customer has gold membership" in new shoppingCart {
+  "customer has gold membership" in new ShoppingCart {
 
-    // Customer is gold member
+    // customer is gold member
     shop.goldMembers.add(customer)
     shop.goldMembers.contains(customer) === true
 
     val order = new PlaceOrder(shop, customer)
 
-    order.customerMarksDesiredProductInShop(p1)
+    order.customerMarksdesiredProductInshop(p1)
 
     val discountedWax = 1 -> Product("Wax", (40 * 0.5).toInt)
     order.customerRequestsToReviewOrder === Seq(discountedWax)
@@ -190,34 +190,34 @@ class ShoppingCart4a extends Specification {
     customer.owns === Map(discountedWax)
   }
 
-  "Customer has too low credit" in new shoppingCart {
+  "customer has too low credit" in new ShoppingCart {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants a BMW
-    val itemAdded = order.customerMarksDesiredProductInShop(p3)
+    // customer wants a BMW
+    val itemAdded = order.customerMarksdesiredProductInshop(p3)
 
     // Any product is added - shop doesn't yet know if customer can afford it
     itemAdded === Some(bmw._2)
     order.customerRequestsToReviewOrder === Seq(bmw)
 
-    // Customer tries to pay order
+    // customer tries to pay order
     val paymentStatus = order.customerPaysOrder
 
-    // Shop informs Customer of too low credit
+    // shop informs customer of too low credit
     paymentStatus === false
 
-    // Customer removes unaffordable BMW from cart
-    order.customerRemovesProductFromCart(p3)
+    // customer removes unaffordable BMW from cart
+    order.customerRemovesProductFromcart(p3)
 
-    // Customer aborts shopping and no purchases are made
+    // customer aborts shopping and no purchases are made
     shop.stock === Map(tires, wax, bmw)
     shop.cash === 100000
     customer.cash === 20000
     customer.owns === Map()
   }
 
-  "All deviations in play" in new shoppingCart {
+  "All deviations in play" in new ShoppingCart {
 
     // Tires out of stock
     shop.stock.remove(p2)
@@ -229,7 +229,7 @@ class ShoppingCart4a extends Specification {
     val order = new PlaceOrder(shop, customer)
 
     // Let's get some tires
-    val tiresItemAdded = order.customerMarksDesiredProductInShop(p2)
+    val tiresItemAdded = order.customerMarksdesiredProductInshop(p2)
 
     // Product out of stock!
     shop.stock.contains(p2) === false
@@ -239,7 +239,7 @@ class ShoppingCart4a extends Specification {
     order.customerRequestsToReviewOrder === Seq()
 
     // Let's buy the BMW instead. As a gold member that should be possible!
-    val bmwItemAdded = order.customerMarksDesiredProductInShop(p3)
+    val bmwItemAdded = order.customerMarksdesiredProductInshop(p3)
 
     // Discounted BMW is added to order
     val discountedBMW = Product("BMW", (50000 * 0.5).toInt)
@@ -253,13 +253,13 @@ class ShoppingCart4a extends Specification {
     discountedBMW.price - customer.cash === 5000
 
     // Ok, no new car today
-    order.customerRemovesProductFromCart(p3)
+    order.customerRemovesProductFromcart(p3)
 
     // Order is back to empty
     order.customerRequestsToReviewOrder === Seq()
 
     // Let's get some wax anyway...
-    val waxItemAdded = order.customerMarksDesiredProductInShop(p1)
+    val waxItemAdded = order.customerMarksdesiredProductInshop(p1)
 
     // Did we get our membership discount on this one?
     val discountedWax = Product("Wax", (40 * 0.5).toInt)

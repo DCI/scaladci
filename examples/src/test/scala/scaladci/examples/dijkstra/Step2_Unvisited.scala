@@ -13,36 +13,36 @@ object Step2_Unvisited extends App {
 
   @context
   class CalculateShortestPath(
-    City: ManhattanGrid,
-    CurrentIntersection: Intersection,
-    Destination: Intersection
+    city: ManhattanGrid,
+    currentIntersection: Intersection,
+    destination: Intersection
   ) {
 
-    private val TentativeDistances = mutable.HashMap[Intersection, Int]()
-    private val Detours            = mutable.Set[Intersection]()
+    private val tentativeDistances = mutable.HashMap[Intersection, Int]()
+    private val detours            = mutable.Set[Intersection]()
 
-    TentativeDistances.assignTentativeDistances
-    Detours.markAsUnvisited
+    tentativeDistances.assigntentativeDistances
+    detours.markAsUnvisited
 
     // All Intersections will still be unvisited at this point
-    println("Unvisited Intersections:\n" + Detours.toList.sortBy(_.name).mkString("\n"))
+    println("Unvisited Intersections:\n" + detours.toList.sortBy(_.name).mkString("\n"))
 
 
     // Roles ##################################################################
 
-    role TentativeDistances {
-      def assignTentativeDistances() {
-        TentativeDistances.put(CurrentIntersection, 0)
-        City.intersections.filter(_ != CurrentIntersection).foreach(TentativeDistances.put(_, Int.MaxValue / 4))
+    role tentativeDistances {
+      def assigntentativeDistances() {
+        tentativeDistances.put(currentIntersection, 0)
+        city.intersections.filter(_ != currentIntersection).foreach(tentativeDistances.put(_, Int.MaxValue / 4))
       }
     }
 
     // A second role is added in a similar fashion to the first one
-    role Detours {
+    role detours {
 
       // STEP 2 - All intersections are unvisited from the start so we simply copy the Intersections from the Grid
       def markAsUnvisited() {
-        Detours ++= City.intersections
+        detours ++= city.intersections
       }
     }
   }

@@ -178,7 +178,7 @@ class CalculateShortestPath
 	#	CurrentIntersection (@current)
 	#	EastNeighbor, which lies DIRECTLY to the east of CurrentIntersection (@east_neighbor)
 	#	SouthernNeighbor, which is DIRECTLy to its south (@south_neighbor)
-	#	Destination, the target node (@destination)
+	#	destination, the target node (@destination)
 	#
 	#	We also add a role of Map (@map) as the oracle for the geometry
 	#

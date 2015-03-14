@@ -7,21 +7,21 @@ class Interactions extends DCIspecification {
   "Are preferably distributed between Roles" >> {
 
     @context
-    case class Context(RoleA: Data) {
-      val RoleB = RoleA
-      val RoleC = RoleA
+    case class Context(roleA: Data) {
+      val roleB = roleA
+      val roleC = roleA
 
-      def distributedInteractions = RoleA.foo
+      def distributedInteractions = roleA.foo
 
-      role RoleA {
-        def foo = 2 * RoleB.bar
+      role roleA {
+        def foo = 2 * roleB.bar
       }
 
-      role RoleB {
-        def bar = 3 * RoleC.baz
+      role roleB {
+        def bar = 3 * roleC.baz
       }
 
-      role RoleC {
+      role roleC {
         def baz = 4 * self.i
       }
     }
@@ -29,24 +29,24 @@ class Interactions extends DCIspecification {
   }
 
 
-  "Can occasionally be centralized in Context" >> {
+  "Can occasionally be centralized in Context (mediator pattern)" >> {
 
     @context
-    case class Context(RoleA: Data) {
-      val RoleB = RoleA
-      val RoleC = RoleA
+    case class Context(roleA: Data) {
+      val roleB = roleA
+      val roleC = roleA
 
-      def centralizedInteractions = RoleA.foo * RoleB.bar * RoleC.baz * RoleC.number
+      def centralizedInteractions = roleA.foo * roleB.bar * roleC.baz * roleC.number
 
-      role RoleA {
+      role roleA {
         def foo = 2
       }
 
-      role RoleB {
+      role roleB {
         def bar = 3
       }
 
-      role RoleC {
+      role roleC {
         def baz = 4
       }
     }

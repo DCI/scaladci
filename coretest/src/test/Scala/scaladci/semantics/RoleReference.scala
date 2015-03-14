@@ -7,11 +7,11 @@ class RoleReference extends DCIspecification {
   "Can be a Role name" >> {
 
     @context
-    case class Context(MyRole: Data) {
-      def useRoleName = MyRole.value
+    case class Context(myRole: Data) {
+      def useRoleName = myRole.value
 
-      role MyRole {
-        def value = MyRole.i * 2
+      role myRole {
+        def value = myRole.i * 2
       }
     }
 
@@ -24,10 +24,10 @@ class RoleReference extends DCIspecification {
   "Can be `self`" >> {
 
     @context
-    case class Context(MyRole: Data) {
-      def useSelf = MyRole.value
+    case class Context(myRole: Data) {
+      def useSelf = myRole.value
 
-      role MyRole {
+      role myRole {
         def value = self.i * 2
       }
     }
@@ -48,10 +48,10 @@ class RoleReference extends DCIspecification {
     expectCompileError(
       """
         @context
-        case class Context(MyRole: Data) {
-          def useThis = MyRole.value
+        case class Context(myRole: Data) {
+          def useThis = myRole.value
 
-          role MyRole {
+          role myRole {
             def value = this.i * 2
           }
         }

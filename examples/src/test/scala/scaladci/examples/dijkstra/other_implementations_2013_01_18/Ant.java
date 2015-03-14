@@ -89,7 +89,7 @@
 //     * in this example is played by an object representing a particular
 //     * Manhattan geometry
 //     */
-//    static class CartographyMap extends Role<Geometry, Object>
+//    static class cartographyMap extends Role<Geometry, Object>
 //    {
 //
 //        Integer distance_between( Node a, Node b )
@@ -118,7 +118,7 @@
 //     * There are four roles in the algorithm: CurrentIntersection (@current)
 //     * EastNeighbor, which lies DIRECTLY to the east of CurrentIntersection
 //     * (@east_neighbor) SouthernNeighbor, which is DIRECTLy to its south
-//     * (@south_neighbor) Destination, the target node (@destination)
+//     * (@south_neighbor) destination, the target node (@destination)
 //     *
 //     * We also add a role of Map (@map) as the oracle for the geometry
 //     *
@@ -208,7 +208,7 @@
 //            current = origin_node;
 //            map = geometries;
 //
-//            bind( map, CartographyMap.class );
+//            bind( map, cartographyMap.class );
 //
 //            bind( current, CurrentIntersection.class );
 //
@@ -465,7 +465,7 @@
 //            destination = geometries.destination();
 //            map = geometries;
 //
-//            bind( map, CartographyMap.class );
+//            bind( map, cartographyMap.class );
 //
 //            for (Node node : map.nodes())
 //            {
@@ -548,7 +548,7 @@
 //        {
 //            return root;
 //        }
-//        public Node getDestination()
+//        public Node getdestination()
 //        {
 //            return destination;
 //        }
@@ -749,7 +749,7 @@
 //        Geometry geometries = new ManhattanGeometry1();
 //
 //        CalculateShortestPath path = new CalculateShortestPath( geometries.getRoot(),
-//                                                                geometries.getDestination(), geometries, null, null, null );
+//                                                                geometries.getdestination(), geometries, null, null, null );
 //
 //        System.out.println( "Path is: " );
 //        for (Node node : path.getPath())
@@ -759,14 +759,14 @@
 //
 //        System.out.println( "distance is "
 //                                  + new CalculateShortestDistance( geometries.getRoot(),
-//                                                                   geometries.getDestination(), geometries ).distance() );
+//                                                                   geometries.getdestination(), geometries ).distance() );
 //
 //        System.out.println();
 //
 //        geometries = new ManhattanGeometry2();
 //
 //        path = new CalculateShortestPath( geometries.getRoot(),
-//                                          geometries.getDestination(), geometries, null, null, null );
+//                                          geometries.getdestination(), geometries, null, null, null );
 //
 //        System.out.println( "Path is: " );
 //        Node last_node = null;
@@ -782,6 +782,6 @@
 //
 //        System.out.println();
 //        System.out.println( "distance is " + new CalculateShortestDistance( geometries.getRoot(),
-//                                                                            geometries.getDestination(), geometries ).distance() );
+//                                                                            geometries.getdestination(), geometries ).distance() );
 //    }
 //}

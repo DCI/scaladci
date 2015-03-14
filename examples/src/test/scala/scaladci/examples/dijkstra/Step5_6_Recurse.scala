@@ -12,7 +12,7 @@ Context itself!
 
 Our recursion ends when we have either reached our destination or there are no more unvisited nodes
 
-From the City Map Model description:
+From the city Map Model description:
 
 Continue this process of updating the NEIGHBORing intersections with the shortest distances, then marking the
 CURRENT INTERSECTION as visited and moving onto the closest UNVISITED INTERSECTION until you have marked the
@@ -34,39 +34,39 @@ object Step5_6_Recurse extends App {
 
   @context
   class Dijkstra(
-    City: ManhattanGrid,
-    CurrentIntersection: Intersection,
-    Destination: Intersection,
-    TentativeDistances: mutable.HashMap[Intersection, Int] = mutable.HashMap[Intersection, Int](),
-    Detours: mutable.Set[Intersection] = mutable.Set[Intersection](),
+    city: ManhattanGrid,
+    currentIntersection: Intersection,
+    destination: Intersection,
+    tentativeDistances: mutable.HashMap[Intersection, Int] = mutable.HashMap[Intersection, Int](),
+    detours: mutable.Set[Intersection] = mutable.Set[Intersection](),
     shortcuts: mutable.HashMap[Intersection, Intersection] = mutable.HashMap[Intersection, Intersection]()
   ) {
 
     // Since we recurse now, we only want those to be initialized the first time
-    if (TentativeDistances.isEmpty) {
-      TentativeDistances.initialize
-      Detours.initialize
+    if (tentativeDistances.isEmpty) {
+      tentativeDistances.initialize
+      detours.initialize
     }
 
     // Main part of algorithm
-    CurrentIntersection.calculateTentativeDistanceOfNeighbors
+    currentIntersection.calculateTentativeDistanceOfNeighbors
 
     // Try to run this version to watch identities change and how tentative distances calculates...
     println(s"\n==============================")
     println(s"This context is new: " + this.hashCode())
-    println(s"Intersection 'a' is the same all the way: " + City.a.hashCode())
-    println(s"\nCurrent $CurrentIntersection     East ${City.eastNeighbor.getOrElse("...............")}")
-    println(s"South   ${City.southNeighbor.getOrElse("...............")}")
-    println("\n" + TentativeDistances.mkString("\n"))
+    println(s"Intersection 'a' is the same all the way: " + city.a.hashCode())
+    println(s"\nCurrent $currentIntersection     East ${city.eastNeighbor.getOrElse("...............")}")
+    println(s"South   ${city.southNeighbor.getOrElse("...............")}")
+    println("\n" + tentativeDistances.mkString("\n"))
 
-    // STEP 5 - If we haven't found a good route to Destination yet, we need to check more intersections...
-    if (Detours.contains(Destination)) {
+    // STEP 5 - If we haven't found a good route to destination yet, we need to check more intersections...
+    if (detours.contains(destination)) {
 
       // STEP 6 - Select Intersection with smallest tentative distance remaining unconsidered intersections
-      val nextCurrent = Detours.withSmallestTentativeDistance
+      val nextCurrent = detours.withSmallestTentativeDistance
 
       // STEP 3 REPEATED HERE - Recurse until we reach destination
-      new Dijkstra(City, nextCurrent, destination, TentativeDistances, Detours, shortcuts)
+      new Dijkstra(city, nextCurrent, destination, tentativeDistances, detours, shortcuts)
     }
 
     // Context helper methods
@@ -85,42 +85,42 @@ object Step5_6_Recurse extends App {
 
     // Roles ##################################################################
 
-    role TentativeDistances {
+    role tentativeDistances {
       def initialize() {
-        TentativeDistances.put(CurrentIntersection, 0)
-        City.intersections.filter(_ != CurrentIntersection).foreach(TentativeDistances.put(_, Int.MaxValue / 4))
+        tentativeDistances.put(currentIntersection, 0)
+        city.intersections.filter(_ != currentIntersection).foreach(tentativeDistances.put(_, Int.MaxValue / 4))
       }
     }
 
-    role Detours {
-      def initialize() { Detours ++= City.intersections }
-      def withSmallestTentativeDistance = { Detours.reduce((x, y) => if (TentativeDistances(x) < TentativeDistances(y)) x else y) }
+    role detours {
+      def initialize() { detours ++= city.intersections }
+      def withSmallestTentativeDistance = { detours.reduce((x, y) => if (tentativeDistances(x) < tentativeDistances(y)) x else y) }
     }
 
-    role CurrentIntersection {
+    role currentIntersection {
       def calculateTentativeDistanceOfNeighbors() {
-        City.eastNeighbor.foreach(updateNeighborDistance(_))
-        City.southNeighbor.foreach(updateNeighborDistance(_))
-        Detours.remove(CurrentIntersection)
+        city.eastNeighbor.foreach(updateNeighborDistance(_))
+        city.southNeighbor.foreach(updateNeighborDistance(_))
+        detours.remove(currentIntersection)
       }
       def updateNeighborDistance(neighborIntersection: Intersection) {
-        if (Detours.contains(neighborIntersection)) {
+        if (detours.contains(neighborIntersection)) {
           val newTentDistanceToNeighbor = currentDistance + lengthOfBlockTo(neighborIntersection)
-          val currentTentDistToNeighbor = TentativeDistances(neighborIntersection)
+          val currentTentDistToNeighbor = tentativeDistances(neighborIntersection)
           if (newTentDistanceToNeighbor < currentTentDistToNeighbor) {
-            TentativeDistances.update(neighborIntersection, newTentDistanceToNeighbor)
-            shortcuts.put(neighborIntersection, CurrentIntersection)
+            tentativeDistances.update(neighborIntersection, newTentDistanceToNeighbor)
+            shortcuts.put(neighborIntersection, currentIntersection)
           }
         }
       }
-      def currentDistance = TentativeDistances(CurrentIntersection)
-      def lengthOfBlockTo(neighbor: Intersection) = City.distanceBetween(CurrentIntersection, neighbor)
+      def currentDistance = tentativeDistances(currentIntersection)
+      def lengthOfBlockTo(neighbor: Intersection) = city.distanceBetween(currentIntersection, neighbor)
     }
 
-    role City {
-      def distanceBetween(from: Intersection, to: Intersection) = City.blockLengths(Block(from, to))
-      def eastNeighbor = City.nextDownTheStreet.get(CurrentIntersection)
-      def southNeighbor = City.nextAlongTheAvenue.get(CurrentIntersection)
+    role city {
+      def distanceBetween(from: Intersection, to: Intersection) = city.blockLengths(Block(from, to))
+      def eastNeighbor = city.nextDownTheStreet.get(currentIntersection)
+      def southNeighbor = city.nextAlongTheAvenue.get(currentIntersection)
     }
   }
 

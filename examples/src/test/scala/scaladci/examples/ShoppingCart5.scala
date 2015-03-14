@@ -22,8 +22,8 @@ https://groups.google.com/forum/#!msg/object-composition/8Qe00Vt3MPc/4v9Wca3NSHI
 
 Side note: Changed "marks" to "selects" in UC step 1 since the user might as well
 "click", "drag" "tell" etc - all UI words representing the same intention of selection.
-We have also already defined the Shop as our scope. So we don't need to write where
-the Customer is selecting ("Customer selects desired product _in Shop_").
+We have also already defined the shop as our scope. So we don't need to write where
+the customer is selecting ("customer selects desired product _in shop_").
 
 See discussion at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
@@ -35,26 +35,26 @@ Person browsing around finds product(s) in a web shop that he/she wants to buy.
 
 Primary actor.. Web customer ("Customer")
 Scope.......... Web shop ("Shop")
-Preconditions.. Shop presents product(s) to Customer
+Preconditions.. Shop presents product(s) to customer
 Trigger........ Customer wants to buy certain product(s)
 
-A "Shopping Cart" is a virtual/visual representation of a potential Order in the UI.
-We therefore loosely treat "Order" as synonymous to "Cart".
+A "shopping cart" is a virtual/visual representation of a potential Order in the UI.
+We therefore loosely treat "Order" as synonymous to "cart".
 
 Main Success Scenario
 ---------------------------------------------------------------------------
 1. Customer selects desired Product [can repeat]
     - Warehouse confirms Product availability
-    - Customer Department provides eligible customer discount factor for Product
-    - System adds product with qualified price to Cart
+    - Customer Department provides eligible Customer discount factor for Product
+    - System adds Product with qualified price to Cart
     - UI shows updated content of Cart to Customer
 2. Customer requests to review Order
     - System collects Cart items
-    - UI shows content of cart to Customer
+    - UI shows content of Cart to Customer
 3. Customer requests to pay Order
     - Payment Gateway confirms Customer has sufficient funds available
     - Payment Gateway initiates transfer of funds to Company
-    - Warehouse prepare products for shipment to Customer
+    - Warehouse prepare Products for shipment to Customer
     - UI confirms purchase to Customer
 
 Deviations
@@ -63,11 +63,11 @@ Deviations
     1. UI informs Customer that Product is out of stock.
 
 1b. Customer has gold membership:
-    1. System adds discounted product to Cart.
+    1. System adds discounted Product to Cart.
 
 3a. Customer has insufficient funds to pay Order:
     1. UI informs Customer of insufficient funds available.
-        a. Customer removes unaffordable Product from Cart
+        a. Customer removes unaffordable Product from cart
             1. System updates content of Cart
             1. UI shows updated content of Cart to Customer
 ===========================================================================
@@ -77,87 +77,87 @@ class ShoppingCart5 extends Specification {
   import ShoppingCartModel._
 
   @context
-  class PlaceOrder(Company: Company, Customer: Person) {
+  class PlaceOrder(Company: Company, customer: Person) {
 
     // Trigger methods
     def processProductSelection(desiredProductId: Int): Option[Product] = {
-      if (!Warehouse.has(desiredProductId))
+      if (!warehouse.has(desiredProductId))
         return None
 
-      val discountFactor = CustomerDepartment.calculateEligibleDiscountFactor
+      val discountFactor = customerDepartment.calculateEligibleDiscountFactor
 
-      val product = Warehouse.get(desiredProductId)
+      val product = warehouse.get(desiredProductId)
       val qualifiedPrice = (product.price * discountFactor).toInt
       val qualifiedProduct = product.copy(price = qualifiedPrice)
 
-      Cart.addItem(desiredProductId, qualifiedProduct)
+      cart.addItem(desiredProductId, qualifiedProduct)
 
       Some(qualifiedProduct)
     }
 
-    def getOrderDetails: Seq[(Int, Product)] = Cart.getItems
+    def getOrderDetails: Seq[(Int, Product)] = cart.getItems
 
     def processPayment: Boolean = {
-      if (!PaymentGateway.confirmSufficientFunds) return false
-      if (!PaymentGateway.initiateOrderPayment) return false
-      Warehouse.shipProducts
+      if (!paymentGateway.confirmSufficientFunds) return false
+      if (!paymentGateway.initiateOrderPayment) return false
+      warehouse.shipProducts
     }
 
     def processProductRemoval(productId: Int): Option[Product] = {
-      Cart.removeItem(productId)
+      cart.removeItem(productId)
     }
 
     // Roles (in order of "appearance")
-    private val Warehouse          = Company
-    private val CustomerDepartment = Company
-    private val PaymentGateway     = Company
-    private val CompanyAccount     = Company
-    private val Cart               = Order(Customer)
+    private val warehouse          = Company
+    private val customerDepartment = Company
+    private val paymentGateway     = Company
+    private val companyAccount     = Company
+    private val cart               = Order(customer)
 
-    role Warehouse {
-      def has(productId: Int) = Warehouse.stock.isDefinedAt(productId)
-      def get(productId: Int) = Warehouse.stock(productId)
+    role warehouse {
+      def has(productId: Int) = warehouse.stock.isDefinedAt(productId)
+      def get(productId: Int) = warehouse.stock(productId)
       def shipProducts = {
-        Customer.owns ++= Cart.items
-        Cart.items.foreach(i => Warehouse.stock.remove(i._1))
+        customer.owns ++= cart.items
+        cart.items.foreach(i => warehouse.stock.remove(i._1))
         true // dummy delivery confirmation
       }
     }
 
-    role CustomerDepartment {
-      def calculateEligibleDiscountFactor = if (Customer.isGoldMember) 0.5 else 1
+    role customerDepartment {
+      def calculateEligibleDiscountFactor = if (customer.isGoldMember) 0.5 else 1
     }
 
-    role Customer {
-      def withdrawFunds(amountToPay: Int) { Customer.cash -= amountToPay }
-      def receiveProducts(products: Seq[(Int, Product)]) { Customer.owns ++= products }
-      def isGoldMember = CustomerDepartment.goldMembers.contains(Customer)
+    role customer {
+      def withdrawFunds(amountToPay: Int) { customer.cash -= amountToPay }
+      def receiveProducts(products: Seq[(Int, Product)]) { customer.owns ++= products }
+      def isGoldMember = customerDepartment.goldMembers.contains(customer)
     }
 
-    role Cart {
+    role cart {
       def addItem(productId: Int, product: Product) {
-        Cart.items.put(productId, product)
+        cart.items.put(productId, product)
       }
       def removeItem(productId: Int): Option[Product] = {
-        if (!Cart.items.isDefinedAt(productId))
+        if (!cart.items.isDefinedAt(productId))
           return None
-        Cart.items.remove(productId)
+        cart.items.remove(productId)
       }
-      def getItems = Cart.items.toIndexedSeq.sortBy(_._1)
-      def total = Cart.items.map(_._2.price).sum
+      def getItems = cart.items.toIndexedSeq.sortBy(_._1)
+      def total = cart.items.map(_._2.price).sum
     }
 
-    role PaymentGateway {
-      def confirmSufficientFunds = Customer.cash >= Cart.total
+    role paymentGateway {
+      def confirmSufficientFunds = customer.cash >= cart.total
       def initiateOrderPayment = {
-        val amount = Cart.total
-        Customer.withdrawFunds(amount)
-        CompanyAccount.depositFunds(amount)
+        val amount = cart.total
+        customer.withdrawFunds(amount)
+        companyAccount.depositFunds(amount)
         true // dummy transaction success
       }
     }
 
-    role CompanyAccount {
+    role companyAccount {
       def depositFunds(amount: Int) { self.cash += amount }
     }
   }
@@ -166,7 +166,7 @@ class ShoppingCart5 extends Specification {
   // Test various scenarios.
   // (copy and paste of ShoppingCart4 tests with trigger method name changes)
 
-  "Main success scenario" in new shoppingCart {
+  "Main success scenario" in new ShoppingCart {
 
     // Initial status (same for all tests...)
     shop.stock === Map(tires, wax, bmw)
@@ -176,7 +176,7 @@ class ShoppingCart5 extends Specification {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants wax and tires
+    // customer wants wax and tires
     order.processProductSelection(p1)
     order.processProductSelection(p2)
 
@@ -190,7 +190,7 @@ class ShoppingCart5 extends Specification {
     customer.owns === Map(tires, wax)
   }
 
-  "Product out of stock" in new shoppingCart {
+  "Product out of stock" in new ShoppingCart {
 
     // Wax out of stock
     shop.stock.remove(p1)
@@ -198,7 +198,7 @@ class ShoppingCart5 extends Specification {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants wax
+    // customer wants wax
     val itemAdded = order.processProductSelection(p1) === None
     order.getOrderDetails === Seq()
 
@@ -212,9 +212,9 @@ class ShoppingCart5 extends Specification {
     customer.owns === Map(tires)
   }
 
-  "Customer has gold membership" in new shoppingCart {
+  "customer has gold membership" in new ShoppingCart {
 
-    // Customer is gold member
+    // customer is gold member
     shop.goldMembers.add(customer)
     shop.goldMembers.contains(customer) === true
 
@@ -233,34 +233,34 @@ class ShoppingCart5 extends Specification {
     customer.owns === Map(discountedWax)
   }
 
-  "Customer has too low credit" in new shoppingCart {
+  "customer has too low credit" in new ShoppingCart {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants a BMW
+    // customer wants a BMW
     val itemAdded = order.processProductSelection(p3)
 
     // Any product is added - shop doesn't yet know if customer can afford it
     itemAdded === Some(bmw._2)
     order.getOrderDetails === Seq(bmw)
 
-    // Customer tries to pay order
+    // customer tries to pay order
     val paymentStatus = order.processPayment
 
-    // Shop informs Customer of too low credit
+    // shop informs customer of too low credit
     paymentStatus === false
 
-    // Customer removes unaffordable BMW from cart
+    // customer removes unaffordable BMW from cart
     order.processProductRemoval(p3)
 
-    // Customer aborts shopping and no purchases are made
+    // customer aborts shopping and no purchases are made
     shop.stock === Map(tires, wax, bmw)
     shop.cash === 100000
     customer.cash === 20000
     customer.owns === Map()
   }
 
-  "All deviations in play" in new shoppingCart {
+  "All deviations in play" in new ShoppingCart {
 
     // Tires out of stock
     shop.stock.remove(p2)

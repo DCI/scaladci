@@ -23,23 +23,23 @@ class MoneyTransfer1 extends Specification {
   }
 
 
-  // Using role name as reference to the Role Player - `Source.decreaseBalance(amount)`
+  // Using role name as reference to the Role Player - `source.decreaseBalance(amount)`
 
   @context
-  case class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
+  case class MoneyTransfer(source: Account, destination: Account, amount: Int) {
 
-    Source.withdraw
+    source.withdraw
 
-    role Source {
+    role source {
       def withdraw {
-        Source.decreaseBalance(amount)
-        Destination.deposit
+        source.decreaseBalance(amount)
+        destination.deposit
       }
     }
 
-    role Destination {
+    role destination {
       def deposit {
-        Destination.increaseBalance(amount)
+        destination.increaseBalance(amount)
       }
     }
   }
@@ -48,15 +48,15 @@ class MoneyTransfer1 extends Specification {
   // Using `self` as reference to the Role Player - `self.decreaseBalance(amount)`
 
   @context
-  case class MoneyTransfer_self(Source: Account, Destination: Account, amount: Int) {
+  case class MoneyTransfer_self(source: Account, destination: Account, amount: Int) {
 
-    Source.withdraw
+    source.withdraw
 
-    role Source {
+    role source {
       def withdraw {
         // role method takes precedence over instance method!
         self.decreaseBalance(amount)
-        Destination.deposit
+        destination.deposit
       }
       // Overriding an instance method - this role method takes precedence
       def decreaseBalance(amount: Int) {
@@ -65,7 +65,7 @@ class MoneyTransfer1 extends Specification {
       }
     }
 
-    role Destination {
+    role destination {
       def deposit {
         self.increaseBalance(amount)
       }
@@ -96,20 +96,20 @@ class MoneyTransfer1 extends Specification {
     _exact same_ with both styles.
   */
   @context
-  case class MoneyTransfer_roleDefMethod(Source: Account, Destination: Account, amount: Int) {
+  case class MoneyTransfer_roleDefMethod(source: Account, destination: Account, amount: Int) {
 
-    Source.withdraw
+    source.withdraw
 
-    role(Source) {
+    role(source) {
       def withdraw {
-        Source.decreaseBalance(amount)
-        Destination.deposit
+        source.decreaseBalance(amount)
+        destination.deposit
       }
     }
 
-    role(Destination) {
+    role(destination) {
       def deposit {
-        Destination.increaseBalance(amount)
+        destination.increaseBalance(amount)
       }
     }
   }
@@ -118,18 +118,18 @@ class MoneyTransfer1 extends Specification {
   // Styles can be mixed!
 
   @context
-  case class MoneyTransfer_mixed(Source: Account, Destination: Account, amount: Int) {
+  case class MoneyTransfer_mixed(source: Account, destination: Account, amount: Int) {
 
-    Source.withdraw
+    source.withdraw
 
-    role(Source) {
+    role(source) {
       def withdraw {
         self.decreaseBalance(amount)
-        Destination.deposit
+        destination.deposit
       }
     }
 
-    role Destination {
+    role destination {
       def deposit {
         // role method takes precedence over instance method
         self.increaseBalance(amount)
@@ -137,7 +137,7 @@ class MoneyTransfer1 extends Specification {
       // Overriding an instance method - this role method takes precedence
       def increaseBalance(amount: Int) {
         val bonus = 10
-        Destination.balance += amount + bonus
+        destination.balance += amount + bonus
       }
     }
   }

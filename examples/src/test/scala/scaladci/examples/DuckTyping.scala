@@ -40,22 +40,22 @@ class DuckTyping extends Specification {
 
   @context
   class MoneyTransfer(
-    Source: { def decreaseBalance(amount: Int) }, // <- structural (duck) type
-    Destination: MyAccount,
+    source: { def decreaseBalance(amount: Int) }, // <- structural (duck) type
+    destination: MyAccount,
     amount: Int) {
 
-    Source.withdraw
+    source.withdraw
 
-    role Source {
+    role source {
       def withdraw() {
-        Source.decreaseBalance(amount)
-        Destination.deposit
+        source.decreaseBalance(amount)
+        destination.deposit
       }
     }
 
-    role Destination {
+    role destination {
       def deposit() {
-        Destination.increaseBalance(amount)
+        destination.increaseBalance(amount)
       }
     }
   }

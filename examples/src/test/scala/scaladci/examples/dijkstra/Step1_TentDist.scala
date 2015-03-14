@@ -27,18 +27,18 @@ We can pass an instance object with a suitable identifier name that will act as 
 object can come from anywhere.
 
 Inside curly braces that matches the second arguments list (roleMethods: => Unit), we can supply our role
-methods as we do with our first role method assignTentativeDistances in the Role "TentativeDistances":
+methods as we do with our first role method assigntentativeDistances in the Role "tentativeDistances":
 
-    role TentativeDistances {
-      def assignTentativeDistances {
+    role tentativeDistances {
+      def assigntentativeDistances {
         ...
       }
     }
 
-After AST transformation, the role method assignTentativeDistances is prefixed with the role name
-TentativeDistances and the whole method is lifted to the Context namespace:
+After AST transformation, the role method assigntentativeDistances is prefixed with the role name
+tentativeDistances and the whole method is lifted to the Context namespace:
 
-    private def TentativeDistances_assignTentativeDistances {
+    private def tentativeDistances_assigntentativeDistances {
       ...
     }
 
@@ -49,11 +49,11 @@ So we are in no way modifying the instance object. We are not "injecting" method
 to the instance class. We are simply adding a role method to the Context, that we then call. This is useful
 when we also transform the calls to the transformed role methods, so that for instance:
 
-    TentativeDistances.assignTentativeDistances
+    tentativeDistances.assigntentativeDistances
 
 is transformed into:
 
-    TentativeDistances_assignTentativeDistances
+    tentativeDistances_assigntentativeDistances
 
 Since the transformed role methods are private there's no risk anyone can use those directly. We only need
 to think about the untransformed methods as we see them in code.
@@ -64,7 +64,7 @@ don't do crazy things with the type macro ;-)
 
 Before our IDE understands type macro transformations (the feature is still in an experimental stage), our
 role method calls will look like invalid code and we won't get any help to autoComplete role method names
-(like assignTentativeDistances). But should we happen to spell a role method name wrong, it won't compile
+(like assigntentativeDistances). But should we happen to spell a role method name wrong, it won't compile
 later anyway, so we're still type safe.
 
 There's still much work to be done to analyze and implement how the type macro handles role method overloading
@@ -86,31 +86,31 @@ object Step1_TentDist extends App {
   class CalculateShortestPath(
     City: ManhattanGrid,
     CurrentIntersection: Intersection,
-    Destination: Intersection
+    destination: Intersection
   ) {
 
     // Initialization of a data-holding role player in the Context
-    private val TentativeDistances = mutable.HashMap[Intersection, Int]()
+    private val tentativeDistances = mutable.HashMap[Intersection, Int]()
 
     // Run
-    TentativeDistances.assignTentativeDistances
+    tentativeDistances.assigntentativeDistances
 
     // Tentative distance of Intersection 'a' has been set to 0 and the rest to infinity:
-    println("Tentative distances after :\n" + TentativeDistances.mkString("\n"))
+    println("Tentative distances after :\n" + tentativeDistances.mkString("\n"))
 
     // Adding the first "housekeeping" role, given a role name after the data it "administrates"
-    role TentativeDistances {
+    role tentativeDistances {
 
       // First role method defined
-      def assignTentativeDistances {
+      def assigntentativeDistances {
 
         // STEP 1:
 
         // We access the instance methods by using the passed instance identifier:
-        TentativeDistances.put(CurrentIntersection, 0)
+        tentativeDistances.put(CurrentIntersection, 0)
 
         // We can access Context parameters directly:
-        City.intersections.filter(_ != CurrentIntersection).foreach(TentativeDistances.put(_, Int.MaxValue / 4))
+        City.intersections.filter(_ != CurrentIntersection).foreach(tentativeDistances.put(_, Int.MaxValue / 4))
       }
     }
   }

@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 /*
 Shopping cart example (version 4c) - no Roles!!
 
-No role methods, no interaction between objects (except with the Cart).
+No role methods, no interaction between objects (except with the cart).
 
 No DCI anymore - only procedural algorithms in the Context which could be
 any class now (notice it's not extending Context anymore).
@@ -17,12 +17,12 @@ See discussion at:
 https://groups.google.com/forum/?fromgroups=#!topic/object-composition/JJiLWBsZWu0
 
 ===========================================================================
-Shopping Cart Service (disclaimer: don't know how to specify a Service...)
+shopping cart Service (disclaimer: don't know how to specify a Service...)
 
 Specifications:
 ---------------------------------------------------------------------------
 Add product to cart:
-  - reserve product in Warehouse
+  - reserve product in warehouse
   - add item to order
   - show updated contents of cart to customer
 
@@ -43,10 +43,10 @@ Product out of stock:
   - don't add item to cart
   - inform customer of shortage
 
-Customer has gold membership:
+customer has gold membership:
   - calculate discount on products
 
-Customer has insufficient funds to pay Order:
+customer has insufficient funds to pay Order:
   - inform customer of insufficient funds on credit card
 ===========================================================================
 */
@@ -55,18 +55,18 @@ class ShoppingCart4c extends Specification {
   import ShoppingCartModel._
 
   // No DCI Context any longer - is it a "Service" now??
-  class PlaceOrder(Shop: Company, Customer: Person) {
+  class PlaceOrder(shop: Company, customer: Person) {
     // No Role any longer
-    private val cart = Order(Customer)
+    private val cart = Order(customer)
 
     // Service methods
-    def customerMarksDesiredProductInShop(productId: Int): Option[Product] = {
-      if (!Shop.stock.isDefinedAt(productId))
+    def customerMarksdesiredProductInshop(productId: Int): Option[Product] = {
+      if (!shop.stock.isDefinedAt(productId))
         return None
-      val product = Shop.stock(productId)
+      val product = shop.stock(productId)
 
       // get price with discount if any
-      val customerIsGoldMember = Shop.goldMembers.contains(Customer)
+      val customerIsGoldMember = shop.goldMembers.contains(customer)
       val goldMemberReduction = 0.5
       val discountFactor = if (customerIsGoldMember) goldMemberReduction else 1
       val discountedPrice = (product.price * discountFactor).toInt
@@ -82,18 +82,18 @@ class ShoppingCart4c extends Specification {
 
     def customerPaysOrder: Boolean = {
       val orderTotal = cart.items.map(_._2.price).sum
-      if (orderTotal > Customer.cash)
+      if (orderTotal > customer.cash)
         return false
 
-      Customer.cash -= orderTotal
-      Shop.cash += orderTotal
+      customer.cash -= orderTotal
+      shop.cash += orderTotal
 
-      Customer.owns ++= cart.items
-      cart.items foreach (Shop.stock remove _._1)
+      customer.owns ++= cart.items
+      cart.items foreach (shop.stock remove _._1)
       true
     }
 
-    def customerRemovesProductFromCart(productId: Int): Option[Product] = {
+    def customerRemovesProductFromcart(productId: Int): Option[Product] = {
       if (!cart.items.isDefinedAt(productId))
         return None
       cart.items.remove(productId)
@@ -106,7 +106,7 @@ class ShoppingCart4c extends Specification {
   // Test various scenarios.
   // (copy and paste of ShoppingCart4a tests)
 
-  "Main success scenario" in new shoppingCart {
+  "Main success scenario" in new ShoppingCart {
 
     // Initial status (same for all tests...)
     shop.stock === Map(tires, wax, bmw)
@@ -116,9 +116,9 @@ class ShoppingCart4c extends Specification {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants wax and tires
-    order.customerMarksDesiredProductInShop(p1)
-    order.customerMarksDesiredProductInShop(p2)
+    // customer wants wax and tires
+    order.customerMarksdesiredProductInshop(p1)
+    order.customerMarksdesiredProductInshop(p2)
 
     order.customerRequestsToReviewOrder === Seq(wax, tires)
 
@@ -130,7 +130,7 @@ class ShoppingCart4c extends Specification {
     customer.owns === Map(tires, wax)
   }
 
-  "Product out of stock" in new shoppingCart {
+  "Product out of stock" in new ShoppingCart {
 
     // Wax out of stock
     shop.stock.remove(p1)
@@ -138,11 +138,11 @@ class ShoppingCart4c extends Specification {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants wax
-    val itemAdded = order.customerMarksDesiredProductInShop(p1) === None
+    // customer wants wax
+    val itemAdded = order.customerMarksdesiredProductInshop(p1) === None
     order.customerRequestsToReviewOrder === Seq()
 
-    order.customerMarksDesiredProductInShop(p2)
+    order.customerMarksdesiredProductInshop(p2)
 
     val orderCompleted = order.customerPaysOrder === true
 
@@ -152,15 +152,15 @@ class ShoppingCart4c extends Specification {
     customer.owns === Map(tires)
   }
 
-  "Customer has gold membership" in new shoppingCart {
+  "customer has gold membership" in new ShoppingCart {
 
-    // Customer is gold member
+    // customer is gold member
     shop.goldMembers.add(customer)
     shop.goldMembers.contains(customer) === true
 
     val order = new PlaceOrder(shop, customer)
 
-    order.customerMarksDesiredProductInShop(p1)
+    order.customerMarksdesiredProductInshop(p1)
 
     val discountedWax = 1 -> Product("Wax", (40 * 0.5).toInt)
     order.customerRequestsToReviewOrder === Seq(discountedWax)
@@ -173,34 +173,34 @@ class ShoppingCart4c extends Specification {
     customer.owns === Map(discountedWax)
   }
 
-  "Customer has too low credit" in new shoppingCart {
+  "customer has too low credit" in new ShoppingCart {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants a BMW
-    val itemAdded = order.customerMarksDesiredProductInShop(p3)
+    // customer wants a BMW
+    val itemAdded = order.customerMarksdesiredProductInshop(p3)
 
     // Any product is added - shop doesn't yet know if customer can afford it
     itemAdded === Some(bmw._2)
     order.customerRequestsToReviewOrder === Seq(bmw)
 
-    // Customer tries to pay order
+    // customer tries to pay order
     val paymentStatus = order.customerPaysOrder
 
-    // Shop informs Customer of too low credit
+    // shop informs customer of too low credit
     paymentStatus === false
 
-    // Customer removes unaffordable BMW from cart
-    order.customerRemovesProductFromCart(p3)
+    // customer removes unaffordable BMW from cart
+    order.customerRemovesProductFromcart(p3)
 
-    // Customer aborts shopping and no purchases are made
+    // customer aborts shopping and no purchases are made
     shop.stock === Map(tires, wax, bmw)
     shop.cash === 100000
     customer.cash === 20000
     customer.owns === Map()
   }
 
-  "All deviations in play" in new shoppingCart {
+  "All deviations in play" in new ShoppingCart {
 
     // Tires out of stock
     shop.stock.remove(p2)
@@ -212,7 +212,7 @@ class ShoppingCart4c extends Specification {
     val order = new PlaceOrder(shop, customer)
 
     // Let's get some tires
-    val tiresItemAdded = order.customerMarksDesiredProductInShop(p2)
+    val tiresItemAdded = order.customerMarksdesiredProductInshop(p2)
 
     // Product out of stock!
     shop.stock.contains(p2) === false
@@ -222,7 +222,7 @@ class ShoppingCart4c extends Specification {
     order.customerRequestsToReviewOrder === Seq()
 
     // Let's buy the BMW instead. As a gold member that should be possible!
-    val bmwItemAdded = order.customerMarksDesiredProductInShop(p3)
+    val bmwItemAdded = order.customerMarksdesiredProductInshop(p3)
 
     // Discounted BMW is added to order
     val discountedBMW = Product("BMW", (50000 * 0.5).toInt)
@@ -236,13 +236,13 @@ class ShoppingCart4c extends Specification {
     discountedBMW.price - customer.cash === 5000
 
     // Ok, no new car today
-    order.customerRemovesProductFromCart(p3)
+    order.customerRemovesProductFromcart(p3)
 
     // Order is back to empty
     order.customerRequestsToReviewOrder === Seq()
 
     // Let's get some wax anyway...
-    val waxItemAdded = order.customerMarksDesiredProductInShop(p1)
+    val waxItemAdded = order.customerMarksdesiredProductInshop(p1)
 
     // Did we get our membership discount on this one?
     val discountedWax = Product("Wax", (40 * 0.5).toInt)

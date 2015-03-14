@@ -12,11 +12,6 @@ class context extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro ContextTransformer.transform
 }
 
-// `@dci object Context` ...
-class dci extends StaticAnnotation {
-  def macroTransform(annottees: Any*): Any = macro ContextTransformer.transform
-}
-
 // Imitating "use case" with a case class Context:
 // `@use case class Context` ...
 class use extends StaticAnnotation {
@@ -166,7 +161,7 @@ object ContextTransformer {
 
         contextTree match {
 
-          // role RoleName {...}
+          // role roleName {...}
           case roleDef@Apply(Select(Ident(TermName("role")), roleName), body) => {
             val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(getRoleBody(body))
             val newRoleDef = Apply(Select(Ident(TermName("role")), roleName), List(Block(newRoleBody, Literal(Constant(())))))
@@ -174,7 +169,7 @@ object ContextTransformer {
             newRoleDef
           }
 
-          // role(RoleName) {...}
+          // role(roleName) {...}
           case roleDef@Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(body, Literal(Constant(()))))) => {
             val newRoleBody = roleBodyTransformer(roleName.toString).transformTrees(getRoleBody(body))
             val newRoleDef = Apply(Apply(Ident(TermName("role")), List(Ident(roleName))), List(Block(newRoleBody, Literal(Constant(())))))

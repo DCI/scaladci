@@ -23,26 +23,26 @@ Person browsing around finds product(s) in a web shop that he/she wants to buy.
 
 Primary actor.. Web customer ("Customer")
 Scope.......... Web shop ("Shop")
-Preconditions.. Shop presents product(s) to Customer
-Trigger........ Customer wants to buy certain product(s)
+Preconditions.. shop presents product(s) to customer
+Trigger........ customer wants to buy certain product(s)
 
-A "Shopping Cart" is a virtual/visual representation of a potential Order in the UI.
-We therefore loosely treat "Order" as synonymous to "Cart".
+A "shopping cart" is a virtual/visual representation of a potential Order in the UI.
+We therefore loosely treat "Order" as synonymous to "cart".
 
 Main Success Scenario
 ---------------------------------------------------------------------------
 1. Customer selects desired Product [can repeat]
     .1 Warehouse confirms Product availability
-    .2 Customer Department provides eligible customer discount factor for Product
-    .3 System adds product with qualified price to Cart
+    .2 Customer Department provides eligible Customer discount factor for Product
+    .3 System adds Product with qualified price to Cart
     .4 UI shows updated content of Cart to Customer
 2. Customer requests to review Order
     .1 System collects Cart items
-    .2 UI shows content of cart to Customer
-3. Customer requests to pay Order
+    .2 UI shows content of Cart to Customer
+3. Ccustomer requests to pay Order
     .1 Payment Gateway confirms Customer has sufficient funds available
     .2 Payment Gateway initiates transfer of funds to Company
-    .3 Warehouse prepare products for shipment to Customer
+    .3 Wwarehouse prepare Products for shipment to Customer
     .4 UI confirms purchase to Customer
 
 Deviations
@@ -65,101 +65,101 @@ class ShoppingCart6 extends Specification {
   import ShoppingCartModel._
 
   @context
-  class PlaceOrder(Company: Company, Customer: Person) {
+  class PlaceOrder(Company: Company, customer: Person) {
 
     // Context state ("Methodless roles"?)
-    private var EligibleDiscountFactor = 1.0
-    private var DesiredProductId       = 0
+    private var eligibleDiscountFactor = 1.0
+    private var desiredProductId       = 0
 
     // Trigger methods
-    def processProductSelection(desiredProductId: Int): Option[Product] = {
-      DesiredProductId = desiredProductId
+    def processProductSelection(desiredProdId: Int): Option[Product] = {
+      desiredProductId = desiredProdId
 
       // Step 1.1 Initiate first interaction...
-      Warehouse.confirmAvailability(desiredProductId)
+      warehouse.confirmAvailability(desiredProdId)
     }
 
-    def getOrderDetails: Seq[(Int, Product)] = Cart.getItems
+    def getOrderDetails: Seq[(Int, Product)] = cart.getItems
 
-    def processPayment: Boolean = PaymentGateway.confirmSufficientFunds
+    def processPayment: Boolean = paymentGateway.confirmSufficientFunds
 
-    def processProductRemoval(productId: Int): Option[Product] = Cart.removeItem(productId)
+    def processProductRemoval(productId: Int): Option[Product] = cart.removeItem(productId)
 
     // Roles (in order of "appearance")
-    private val Warehouse          = Company
-    private val CustomerDepartment = Company
-    private val PaymentGateway     = Company
-    private val CompanyAccount     = Company
-    private val Cart               = Order(Customer)
+    private val warehouse          = Company
+    private val customerDepartment = Company
+    private val paymentGateway     = Company
+    private val companyAccount     = Company
+    private val cart               = Order(customer)
 
-    role Warehouse {
+    role warehouse {
       def confirmAvailability(productId: Int): Option[Product] = {
-        if (!Warehouse.has(DesiredProductId))
+        if (!warehouse.has(desiredProductId))
           return None
 
         // Step 1.2 Second interaction...
-        CustomerDepartment.calculateEligibleDiscountFactor
+        customerDepartment.calculateEligibleDiscountFactor
       }
-      def has(productId: Int) = Warehouse.stock.isDefinedAt(productId)
-      def get(productId: Int) = Warehouse.stock(productId)
+      def has(productId: Int) = warehouse.stock.isDefinedAt(productId)
+      def get(productId: Int) = warehouse.stock(productId)
       def shipProducts = {
-        Customer.owns ++= Cart.items
-        Cart.items.foreach(i => Warehouse.stock.remove(i._1))
+        customer.owns ++= cart.items
+        cart.items.foreach(i => warehouse.stock.remove(i._1))
         true // dummy confirmation
       }
     }
 
-    role CustomerDepartment {
+    role customerDepartment {
       def calculateEligibleDiscountFactor = {
-        if (Customer.isGoldMember) EligibleDiscountFactor = 0.5
+        if (customer.isGoldMember) eligibleDiscountFactor = 0.5
 
         // Step 1.3 Third interaction...
-        Cart.addItem
+        cart.addItem
       }
     }
 
-    role Customer {
-      def withdrawFunds(amountToPay: Int) { Customer.cash -= amountToPay }
-      def receiveProducts(products: Seq[(Int, Product)]) { Customer.owns ++= products }
-      def isGoldMember = CustomerDepartment.goldMembers.contains(Customer)
+    role customer {
+      def withdrawFunds(amountToPay: Int) { customer.cash -= amountToPay }
+      def receiveProducts(products: Seq[(Int, Product)]) { customer.owns ++= products }
+      def isGoldMember = customerDepartment.goldMembers.contains(customer)
     }
 
-    role Cart {
+    role cart {
       def addItem = {
-        val product = Warehouse.get(DesiredProductId)
-        val qualifiedPrice = (product.price * EligibleDiscountFactor).toInt
+        val product = warehouse.get(desiredProductId)
+        val qualifiedPrice = (product.price * eligibleDiscountFactor).toInt
         val qualifiedProduct = product.copy(price = qualifiedPrice)
-        Cart.items.put(DesiredProductId, qualifiedProduct)
+        cart.items.put(desiredProductId, qualifiedProduct)
         Some(qualifiedProduct)
       }
       def removeItem(productId: Int): Option[Product] = {
-        if (!Cart.items.isDefinedAt(productId))
+        if (!cart.items.isDefinedAt(productId))
           return None
-        Cart.items.remove(productId)
+        cart.items.remove(productId)
       }
-      def getItems = Cart.items.toIndexedSeq.sortBy(_._1)
-      def total = Cart.items.map(_._2.price).sum
+      def getItems = cart.items.toIndexedSeq.sortBy(_._1)
+      def total = cart.items.map(_._2.price).sum
     }
 
-    role PaymentGateway {
+    role paymentGateway {
       // Step 3.1
       def confirmSufficientFunds: Boolean = {
-        if (Customer.cash < Cart.total) return false
+        if (customer.cash < cart.total) return false
 
         // Step 3.2
         initiateOrderPayment
       }
       def initiateOrderPayment: Boolean = {
-        val amount = Cart.total
-        Customer.withdrawFunds(amount)
-        CompanyAccount.depositFunds(amount)
+        val amount = cart.total
+        customer.withdrawFunds(amount)
+        companyAccount.depositFunds(amount)
 
         // Step 3.3
-        Warehouse.shipProducts
+        warehouse.shipProducts
       }
     }
 
-    role CompanyAccount {
+    role companyAccount {
       def depositFunds(amount: Int) { self.cash += amount }
     }
   }
@@ -168,7 +168,7 @@ class ShoppingCart6 extends Specification {
   // Test various scenarios.
   // (copy and paste of ShoppingCart4a tests)
 
-  "Main success scenario" in new shoppingCart {
+  "Main success scenario" in new ShoppingCart {
 
     // Initial status (same for all tests...)
     shop.stock === Map(tires, wax, bmw)
@@ -178,7 +178,7 @@ class ShoppingCart6 extends Specification {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants wax and tires
+    // customer wants wax and tires
     order.processProductSelection(p1)
     order.processProductSelection(p2)
 
@@ -192,7 +192,7 @@ class ShoppingCart6 extends Specification {
     customer.owns === Map(tires, wax)
   }
 
-  "Product out of stock" in new shoppingCart {
+  "Product out of stock" in new ShoppingCart {
 
     // Wax out of stock
     shop.stock.remove(p1)
@@ -200,7 +200,7 @@ class ShoppingCart6 extends Specification {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants wax
+    // customer wants wax
     val itemAdded = order.processProductSelection(p1) === None
     order.getOrderDetails === Seq()
 
@@ -214,9 +214,9 @@ class ShoppingCart6 extends Specification {
     customer.owns === Map(tires)
   }
 
-  "Customer has gold membership" in new shoppingCart {
+  "customer has gold membership" in new ShoppingCart {
 
-    // Customer is gold member
+    // customer is gold member
     shop.goldMembers.add(customer)
     shop.goldMembers.contains(customer) === true
 
@@ -235,34 +235,34 @@ class ShoppingCart6 extends Specification {
     customer.owns === Map(discountedWax)
   }
 
-  "Customer has too low credit" in new shoppingCart {
+  "customer has too low credit" in new ShoppingCart {
 
     val order = new PlaceOrder(shop, customer)
 
-    // Customer wants a BMW
+    // customer wants a BMW
     val itemAdded = order.processProductSelection(p3)
 
     // Any product is added - shop doesn't yet know if customer can afford it
     itemAdded === Some(bmw._2)
     order.getOrderDetails === Seq(bmw)
 
-    // Customer tries to pay order
+    // customer tries to pay order
     val paymentStatus = order.processPayment
 
-    // Shop informs Customer of too low credit
+    // shop informs customer of too low credit
     paymentStatus === false
 
-    // Customer removes unaffordable BMW from cart
+    // customer removes unaffordable BMW from cart
     order.processProductRemoval(p3)
 
-    // Customer aborts shopping and no purchases are made
+    // customer aborts shopping and no purchases are made
     shop.stock === Map(tires, wax, bmw)
     shop.cash === 100000
     customer.cash === 20000
     customer.owns === Map()
   }
 
-  "All deviations in play" in new shoppingCart {
+  "All deviations in play" in new ShoppingCart {
 
     // Tires out of stock
     shop.stock.remove(p2)

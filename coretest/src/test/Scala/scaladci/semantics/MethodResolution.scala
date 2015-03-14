@@ -193,33 +193,33 @@ class MethodResolution extends DCIspecification {
     }
 
     @context
-    case class Battle(Id: Int, Bear: Player, Lion: Player) {
+    case class Battle(id: Int, bear: Player, lion: Player) {
 
       def start() {
-        println(Id + " battle commencing:")
-        Bear.fight()
+        println(id + " battle commencing:")
+        bear.fight()
       }
       def interview() {
-        doInterview(Bear)
-        doInterview(Lion)
+        doInterview(bear)
+        doInterview(lion)
       }
 
-      role Bear {
+      role bear {
         def say() {
-          println(Id + " [" + self.name + "] Grrrr.....")
+          println(id + " [" + self.name + "] Grrrr.....")
         }
         def fight() {
-          Bear.say()
-          Lion.fight()
+          bear.say()
+          lion.fight()
         }
       }
 
-      role Lion {
+      role lion {
         def say() {
-          println(Id + " [" + self.name + "] Meow.....")
+          println(id + " [" + self.name + "] Meow.....")
         }
         def fight() {
-          callback(Lion.say)
+          callback(lion.say)
         }
       }
     }

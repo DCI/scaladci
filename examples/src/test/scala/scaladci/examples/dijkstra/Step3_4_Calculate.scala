@@ -21,42 +21,42 @@ object Step3_4_Calculate extends App {
 
   @context
   class CalculateShortestPath(
-    City: ManhattanGrid,
-    CurrentIntersection: Intersection,
-    Destination: Intersection
+    city: ManhattanGrid,
+    currentIntersection: Intersection,
+    destination: Intersection
   ) {
 
-    private val TentativeDistances = mutable.HashMap[Intersection, Int]()
-    private val Detours            = mutable.Set[Intersection]()
-    private val EastNeighbor       = City.nextDownTheStreet.get(CurrentIntersection)
-    private val SouthNeighbor      = City.nextAlongTheAvenue.get(CurrentIntersection)
+    private val tentativeDistances = mutable.HashMap[Intersection, Int]()
+    private val detours            = mutable.Set[Intersection]()
+    private val EastNeighbor       = city.nextDownTheStreet.get(currentIntersection)
+    private val SouthNeighbor      = city.nextAlongTheAvenue.get(currentIntersection)
     private val shortcuts          = mutable.HashMap[Intersection, Intersection]()
 
-    TentativeDistances.initialize
-    Detours.initialize
+    tentativeDistances.initialize
+    detours.initialize
 
-    println("Unvisited before:\n" + Detours.toList.sortBy(_.name).mkString("\n"))
+    println("Unvisited before:\n" + detours.toList.sortBy(_.name).mkString("\n"))
 
-    CurrentIntersection.calculateTentativeDistanceOfNeighbors
+    currentIntersection.calculateTentativeDistanceOfNeighbors
 
     // Current intersection ('a') is no longer in the unvisited set:
-    println("\nUnvisited after :\n" + Detours.toList.sortBy(_.name).mkString("\n"))
+    println("\nUnvisited after :\n" + detours.toList.sortBy(_.name).mkString("\n"))
 
 
     // Roles ##################################################################
 
-    role TentativeDistances {
+    role tentativeDistances {
       def initialize() {
-        TentativeDistances.put(CurrentIntersection, 0)
-        City.intersections.filter(_ != CurrentIntersection).foreach(TentativeDistances.put(_, Int.MaxValue / 4))
+        tentativeDistances.put(currentIntersection, 0)
+        city.intersections.filter(_ != currentIntersection).foreach(tentativeDistances.put(_, Int.MaxValue / 4))
       }
     }
 
-    role Detours {
-      def initialize() { Detours ++= City.intersections }
+    role detours {
+      def initialize() { detours ++= city.intersections }
     }
 
-    role CurrentIntersection {
+    role currentIntersection {
       def calculateTentativeDistanceOfNeighbors() {
 
         // STEP 3 in the algorithm
@@ -65,26 +65,26 @@ object Step3_4_Calculate extends App {
         SouthNeighbor.foreach(updateNeighborDistance(_))
 
         // STEP 4 in the algorithm (included in this version since it's just a one-liner)
-        Detours.remove(CurrentIntersection)
+        detours.remove(currentIntersection)
       }
 
       // example of "internal role method". it could have been private if we wanted to prevent access from the Context.
       def updateNeighborDistance(neighborIntersection: Intersection) {
-        if (Detours.contains(neighborIntersection)) {
+        if (detours.contains(neighborIntersection)) {
           val newTentDistanceToNeighbor = currentDistance + lengthOfBlockTo(neighborIntersection)
-          val currentTentDistToNeighbor = TentativeDistances(neighborIntersection)
+          val currentTentDistToNeighbor = tentativeDistances(neighborIntersection)
           if (newTentDistanceToNeighbor < currentTentDistToNeighbor) {
-            TentativeDistances.update(neighborIntersection, newTentDistanceToNeighbor)
-            shortcuts.put(neighborIntersection, CurrentIntersection)
+            tentativeDistances.update(neighborIntersection, newTentDistanceToNeighbor)
+            shortcuts.put(neighborIntersection, currentIntersection)
           }
         }
       }
-      def currentDistance = TentativeDistances(CurrentIntersection)
-      def lengthOfBlockTo(neighbor: Intersection) = City.distanceBetween(CurrentIntersection, neighbor)
+      def currentDistance = tentativeDistances(currentIntersection)
+      def lengthOfBlockTo(neighbor: Intersection) = city.distanceBetween(currentIntersection, neighbor)
     }
 
-    role City {
-      def distanceBetween(from: Intersection, to: Intersection) = City.blockLengths(Block(from, to))
+    role city {
+      def distanceBetween(from: Intersection, to: Intersection) = city.blockLengths(Block(from, to))
     }
   }
 

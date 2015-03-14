@@ -14,23 +14,23 @@ class Dijkstra_self extends Specification {
 
   @context
   class Dijkstra(
-    City: ManhattanGrid,
-    CurrentIntersection: Intersection,
-    Destination: Intersection,
-    TentativeDistances: mutable.HashMap[Intersection, Int] = mutable.HashMap[Intersection, Int](),
-    Detours: mutable.Set[Intersection] = mutable.Set[Intersection](),
+    city: ManhattanGrid,
+    currentIntersection: Intersection,
+    destination: Intersection,
+    tentativeDistances: mutable.HashMap[Intersection, Int] = mutable.HashMap[Intersection, Int](),
+    detours: mutable.Set[Intersection] = mutable.Set[Intersection](),
     shortcuts: mutable.HashMap[Intersection, Intersection] = mutable.HashMap[Intersection, Intersection]()
     ) {
 
     // Algorithm
-    if (TentativeDistances.isEmpty) {
-      TentativeDistances.initialize
-      Detours.initialize
+    if (tentativeDistances.isEmpty) {
+      tentativeDistances.initialize
+      detours.initialize
     }
-    CurrentIntersection.calculateTentativeDistanceOfNeighbors
-    if (Detours contains Destination) {
-      val nextCurrent = Detours.withSmallestTentativeDistance
-      new Dijkstra(City, nextCurrent, destination, TentativeDistances, Detours, shortcuts)
+    currentIntersection.calculateTentativeDistanceOfNeighbors
+    if (detours contains destination) {
+      val nextCurrent = detours.withSmallestTentativeDistance
+      new Dijkstra(city, nextCurrent, destination, tentativeDistances, detours, shortcuts)
     }
 
     // Context helper methods
@@ -39,42 +39,42 @@ class Dijkstra_self extends Specification {
 
     // Roles
 
-    role TentativeDistances {
+    role tentativeDistances {
       def initialize {
-        self.put(CurrentIntersection, 0)
-        City.intersections.filter(_ != CurrentIntersection).foreach(self.put(_, Int.MaxValue / 4))
+        self.put(currentIntersection, 0)
+        city.intersections.filter(_ != currentIntersection).foreach(self.put(_, Int.MaxValue / 4))
       }
     }
 
-    role Detours {
-      def initialize { self ++= City.intersections }
-      def withSmallestTentativeDistance = { self.reduce((x, y) => if (TentativeDistances(x) < TentativeDistances(y)) x else y) }
+    role detours {
+      def initialize { self ++= city.intersections }
+      def withSmallestTentativeDistance = { self.reduce((x, y) => if (tentativeDistances(x) < tentativeDistances(y)) x else y) }
     }
 
-    role CurrentIntersection {
+    role currentIntersection {
       def calculateTentativeDistanceOfNeighbors {
-        City.eastNeighbor foreach updateNeighborDistance
-        City.southNeighbor foreach updateNeighborDistance
-        Detours remove self
+        city.eastNeighbor foreach updateNeighborDistance
+        city.southNeighbor foreach updateNeighborDistance
+        detours remove self
       }
       def updateNeighborDistance(neighborIntersection: Intersection) {
-        if (Detours.contains(neighborIntersection)) {
+        if (detours.contains(neighborIntersection)) {
           val newTentDistanceToNeighbor = currentDistance + lengthOfBlockTo(neighborIntersection)
-          val currentTentDistToNeighbor = TentativeDistances(neighborIntersection)
+          val currentTentDistToNeighbor = tentativeDistances(neighborIntersection)
           if (newTentDistanceToNeighbor < currentTentDistToNeighbor) {
-            TentativeDistances.update(neighborIntersection, newTentDistanceToNeighbor)
+            tentativeDistances.update(neighborIntersection, newTentDistanceToNeighbor)
             shortcuts.put(neighborIntersection, self)
           }
         }
       }
-      def currentDistance = TentativeDistances(CurrentIntersection)
-      def lengthOfBlockTo(neighbor: Intersection) = City.distanceBetween(CurrentIntersection, neighbor)
+      def currentDistance = tentativeDistances(currentIntersection)
+      def lengthOfBlockTo(neighbor: Intersection) = city.distanceBetween(currentIntersection, neighbor)
     }
 
-    role City {
+    role city {
       def distanceBetween(from: Intersection, to: Intersection) = self.blockLengths(Block(from, to))
-      def eastNeighbor = self.nextDownTheStreet.get(CurrentIntersection)
-      def southNeighbor = self.nextAlongTheAvenue.get(CurrentIntersection)
+      def eastNeighbor = self.nextDownTheStreet.get(currentIntersection)
+      def southNeighbor = self.nextAlongTheAvenue.get(currentIntersection)
     }
   }
 

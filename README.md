@@ -21,25 +21,25 @@ very slim and avoid that it gradually takes on more and more responsibilities fo
 it participates in.
 
 Our Mental Model of a money transfer could be "Withdraw amount from a source account and deposit the 
-amount in a destination account". Interacting concepts like our "Source" 
-and "Destination" accounts we call "Roles" in DCI. And we can define how they can interact in our 
+amount in a destination account". Interacting concepts like our "source"
+and "destination" accounts we call "Roles" in DCI. And we can define how they can interact in our
 Context to accomplish a money transfer:
 ```Scala
 @context
-class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
+class MoneyTransfer(source: Account, destination: Account, amount: Int) {
 
-  Source.withdraw // Interactions start...
+  source.withdraw // Interactions start...
 
-  role Source {
+  role source {
     def withdraw() {
-      Source.decreaseBalance(amount)  
-      Destination.deposit
+      source.decreaseBalance(amount)
+      destination.deposit
     }
   }
 
-  role Destination {
+  role destination {
     def deposit() {
-      Destination.increaseBalance(amount)
+      destination.increaseBalance(amount)
     }
   }
 }
@@ -57,17 +57,17 @@ lifted into Context scope which accomplishes what we intended in our source code
 though we had written this:
 
 ```Scala
-class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
+class MoneyTransfer(source: Account, destination: Account, amount: Int) {
   
-  Source_withdraw()
+  source_withdraw()
   
-  private def Source_withdraw() {
-    Source.decreaseBalance(amount) // Calling Data instance method
-    Destination_deposit()          // Calling Role method
+  private def source_withdraw() {
+    source.decreaseBalance(amount) // Calling Data instance method
+    destination_deposit()          // Calling Role method
   }
   
-  private def Destination_deposit() {
-    Destination.increaseBalance(amount)
+  private def destination_deposit() {
+    destination.increaseBalance(amount)
   }
 }
 ```
@@ -75,37 +75,37 @@ class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
 ## "Overriding" instance methods
 In some cases we want to override the instance methods of a domain object with a Role method:
 ```Scala
-  role Source {
+  role source {
     def withdraw {
-      Source.decreaseBalance(amount)
-      Destination.deposit
+      source.decreaseBalance(amount)
+      destination.deposit
     }
     
     // Role method with same signature as instance method
     def decreaseBalance(amount: Int) { 
-      Source.balance -= amount * 3
+      source.balance -= amount * 3
     }
   }
 
-  role Destination {
+  role destination {
     def deposit {
-      Destination.increaseBalance(amount)
+      destination.increaseBalance(amount)
     }
   }
 ```
 which will now turn into
 ```Scala
-  private def Source_withdraw() {
-    Source_decreaseBalance(amount) // Notice the underscore - the Role method will be called
-    Destination_deposit()
+  private def source_withdraw() {
+    source_decreaseBalance(amount) // Notice the underscore - the Role method will be called
+    destination_deposit()
   }
   
-  private def Source_decreaseBalance() {
-    Source.balance -= amount * 3
+  private def source_decreaseBalance() {
+    source.balance -= amount * 3
   }
   
-  private def Destination_deposit() {
-    Destination.increaseBalance(amount)
+  private def destination_deposit() {
+    destination.increaseBalance(amount)
   }
 ```
 Role methods will always take precedence over instance methods when they have the same signature.
@@ -113,14 +113,14 @@ Role methods will always take precedence over instance methods when they have th
 ## `self` reference to a Role Player
 As an alternative to using the Role name to reference a Role Player we can also use `self`:
 ```Scala
-  role Source {
+  role source {
     def withdraw {
       self.decreaseBalance(amount)  
-      Destination.deposit
+      destination.deposit
     }
   }
 
-  role Destination {
+  role destination {
     def deposit {
       self.increaseBalance(amount)
     }
@@ -131,36 +131,36 @@ Using `self` doesn't change how Role methods take precedence over instance metho
 
 ## Multiple roles
 We can "assign" or "bind" a domain object to several Roles in our Context by simply making
-more variables with Role names pointing to that object:
+more variables with role names pointing to that object:
 ```Scala
 @context
-class MyContext(SomeRole: MyData) {
-  val OtherRole = SomeRole
-  val LocalRole = new DummyData()
+class MyContext(someRole: MyData) {
+  val otherRole = someRole
+  val localRole = new DummyData()
   
-  SomeRole.foo() // prints "Hello world"
+  someRole.foo() // prints "Hello world"
   
-  role SomeRole {
+  role someRole {
     def foo() {
-      SomeRole.doMyDataStuff()
-      OtherRole.bar()
+      someRole.doMyDataStuff()
+      otherRole.bar()
     }
   }
   
-  role OtherRole {
+  role otherRole {
     def bar() {
-      LocalRole.say("Hello")
+      localRole.say("Hello")
     }
   }
   
-  role LocalRole {
+  role localRole {
     def say(s: String) {
       println(s + " world")
     }
   }
 }
 ```
-As you see in line 3, OtherRole is simply a reference pointing to the MyData instance (named SomeRole). 
+As you see in line 3, otherRole is simply a reference pointing to the MyData instance (named someRole).
 
 Inside each role definition we can still use `self`.
 
@@ -172,7 +172,7 @@ role-specific behavior / role methods.
 In order to have an intuitive syntax like
 
 ```scala
-role RoleName { 
+role roleName {
   // role methods...
 }
 ```
@@ -201,16 +201,16 @@ For the purpose of DCI we can presume to call a method on `role` that "happens"
 to have a Role name:
 
 ```scala
-role.Source(args)      ~~> role.applyDynamic("Source")(args)
-role.Destination(args) ~~> role.applyDynamic("Destination")(args)
+role.source(args)      ~~> role.applyDynamic("source")(args)
+role.destination(args) ~~> role.applyDynamic("destination")(args)
 ```
 
 Scala allow us to replace the `.` with a space and the parentheses with curly
 braces:
 
 ```scala
-role Source {args}      ~~> role.applyDynamic("Source")(args)
-role Destination {args} ~~> role.applyDynamic("Destination")(args)
+role source {args}      ~~> role.applyDynamic("source")(args)
+role destination {args} ~~> role.applyDynamic("destination")(args)
 ```
 
 You see where we're getting at. Now, the `args` signature in our
@@ -218,23 +218,23 @@ You see where we're getting at. Now, the `args` signature in our
  allow us to define a block of code that returns nothing:
  
 ```scala
-role Source {
+role source {
   doThis
   doThat
 }      
-~~> role.applyDynamic("Source")(doThis; doThat) // pseudo code
+~~> role.applyDynamic("source")(doThis; doThat) // pseudo code
 ```
 
-The observant reader will note that "Source" given the Dynamic invocation 
+The observant reader will note that "source" given the Dynamic invocation
 capability is merely a "free text" name that has no connection to the object 
-that we have called "Source":
+that we have called "source":
 
 ```scala
-val Source = new Account(...) // `Source` is an object identifier
-role Source {...}             // "Source" is a method name
+val source = new Account(...) // `source` is an object identifier
+role source {...}             // "source" is a method name
 ```
 
-In order to enforce that the method name "Source" points to the object `Source` 
+In order to enforce that the method name "source" points to the object `source`
 our `@context` macro annotation checks that the method name has a corresponding 
 identifier in the scope of the annotated Context. If it doesn't it won't compile 
 and the programmer will be noticed of available identifier names (one could have 
@@ -243,7 +243,7 @@ misspelled the Role name for instance).
 If one prefers, the old "method syntax" can still be used:
 
 ```scala
-role(Source) {...} // `Source` is an object identifier
+role(source) {...} // `source` is an object identifier
 ```
 This has the advantage of being inferred by the IDE but at the same time being
 less DCI ideomatic since it looks less like a role definition than a method call 

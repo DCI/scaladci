@@ -19,8 +19,8 @@ class Context extends DCIspecification {
     expectCompileError(
       """
         @context
-        class OuterContext2(MyRole: Data) {
-          role MyRole {
+        class OuterContext2(myRole: Data) {
+          role myRole {
             @context
             class NestedContext2
           }
@@ -31,8 +31,8 @@ class Context extends DCIspecification {
     expectCompileError(
       """
         @context
-        class OuterContext3(MyRole: Data) {
-          role MyRole {
+        class OuterContext3(myRole: Data) {
+          role myRole {
             def roleMethod {
               @context
               class NestedContext3

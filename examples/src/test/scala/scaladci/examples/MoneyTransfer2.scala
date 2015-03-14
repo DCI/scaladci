@@ -26,27 +26,27 @@ class MoneyTransfer2 extends Specification {
   }
 
   @context
-  case class MoneyTransfer(Source: Account, Destination: Account, amount: Int) {
+  case class MoneyTransfer(source: Account, destination: Account, amount: Int) {
 
     def transfer() {
-      Source.transfer
+      source.transfer
     }
 
-    role Source {
+    role source {
       def withdraw() {
         self.decreaseBalance(amount)
       }
       def transfer() {
-        println("Source balance is: " + self.balance)
-        println("Destination balance is: " + Destination.balance)
-        Destination.deposit()
+        println("source balance is: " + self.balance)
+        println("destination balance is: " + destination.balance)
+        destination.deposit()
         withdraw()
-        println("Source balance is now: " + self.balance)
-        println("Destination balance is now: " + Destination.balance)
+        println("source balance is now: " + self.balance)
+        println("destination balance is now: " + destination.balance)
       }
     }
 
-    role Destination {
+    role destination {
       def deposit() {
         self.increaseBalance(amount)
       }
