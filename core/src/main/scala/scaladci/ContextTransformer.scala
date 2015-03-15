@@ -67,8 +67,9 @@ object ContextTransformer {
         // roleMethod(..) => Role_roleMethod(..)
         case roleMethodRef@Ident(methodName) if ctx.roles(roleName).contains(methodName.toString) =>
           val newRoleMethodRef = Ident(TermName(roleName + "_" + methodName.toString))
-          //          comp(roleMethodRef, newRoleMethodRef)
+          //                    comp(roleMethodRef, newRoleMethodRef)
           newRoleMethodRef
+
 
         //        // Disallow `this` in role method body
         //        case thisRoleMethodRef@Select(This(typeNames.EMPTY), TermName(methodName)) =>
@@ -90,6 +91,14 @@ object ContextTransformer {
         // someMethod(this) => someMethod(RoleName)
         // possibly other uses?...
         case This(typeNames.EMPTY) => Ident(TermName(roleName))
+
+
+
+        //        // className.classMethod => className.classMethod
+        //        case classMethodRef@Select(Ident(TermName(className)), TermName(methodName)) => classMethodRef // compiler will expose non-valid refs
+        //
+        //        // classMethod => RoleName.classMethod
+        //        case classMethodRef@Ident(methodName) => Select(Ident(TermName(roleName)), methodName) // compiler will expose non-valid refs
 
 
         // self.roleMethod(params..) => RoleName_roleMethod(params..)
@@ -123,11 +132,11 @@ object ContextTransformer {
           // Prefix role method name
           // roleMethod => RoleName_roleMethod
           val newRoleMethodName = TermName(roleName + "_" + roleMethodName.toString)
-          //                    comp(roleMethodName, newRoleMethodName)
+          //          comp(roleMethodName, newRoleMethodName)
 
           // Transform role method body
           val newRoleMethodBody = roleMethodTransformer(roleName).transform(roleMethodBody)
-          //                    comp(roleMethodBody, newRoleMethodBody)
+          //          comp(roleMethodBody, newRoleMethodBody)
 
           // Build role method AST
           val newRoleMethod = DefDef(Modifiers(PRIVATE), newRoleMethodName, x2, x3, x4, newRoleMethodBody)

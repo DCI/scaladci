@@ -8,7 +8,7 @@ class MethodResolution extends DCIspecification {
 
   class Obj {
     def foo = "FOO"
-    def bar = "BAR" + foo
+    def bar = "BAR"
   }
 
   "Role method takes precedence over instance method" >> {
@@ -50,7 +50,7 @@ class MethodResolution extends DCIspecification {
         def foo = self.bar
       }
     }
-    Context3(new Obj).resolve === "BARFOO"
+    Context3(new Obj).resolve === "BAR"
 
 
     @context
@@ -63,22 +63,50 @@ class MethodResolution extends DCIspecification {
         def bar = "bar"
       }
     }
-    Context4(new Obj).resolve === "BARFOObar"
+    Context4(new Obj).resolve === "BARbar"
 
 
     @context
-    case class Context5(a: Obj) {
+    case class ContextOverriding(a: Obj) {
 
+      def bar = "CTX"
       def resolve = a.foo
 
       role a {
-        def foo = self.bar + a.bar
+        def foo = bar + self.bar + this.bar + a.bar
         def bar = "bar"
       }
     }
-    Context5(new Obj).resolve === "BARFOObar"
-    // Todo: should be:
-    //    Context5(new Obj).resolve === "barbar"
+    ContextOverriding(new Obj).resolve === "barBARBARbar"
+    // Or should it be:
+    // ContextOverriding(new Obj).resolve === "barbarbarbar"
+
+
+    @context
+    case class ContextNotOverriding(a: Obj) {
+
+      def bar = "CTX"
+      def resolve = a.foo
+
+      role a {
+        def foo = bar + self.bar + this.bar + a.bar
+      }
+    }
+    ContextNotOverriding(new Obj).resolve === "CTXBARBARBAR"
+    // Or should it be:
+    // ContextNotOverriding(new Obj).resolve === "BARBARBARBAR"
+
+
+    //@context
+    //case class ContextNotOverriding2(a: Obj) {
+    //
+    //  def resolve = a.foo
+    //
+    //  role a {
+    //    def foo = bar
+    //  }
+    //}
+    //ContextNotOverriding2(new Obj).resolve === "BAR"
 
 
     @context
@@ -93,7 +121,7 @@ class MethodResolution extends DCIspecification {
         def bar = "bar"
       }
     }
-    Context6(new Obj, new Obj).resolve === "BARFOObar"
+    Context6(new Obj, new Obj).resolve === "BARbar"
 
 
     @context
@@ -105,11 +133,10 @@ class MethodResolution extends DCIspecification {
         def foo = self.bar + b.bar
       }
       role b {
-        def bar = "bar" // not called
+        def bar = "bar"
       }
     }
-    Context7(new Obj, new Obj).resolve === "BARFOObar"
-
+    Context7(new Obj, new Obj).resolve === "BARbar"
 
     // Todo: are these tests shredding sufficient light on method resolution?!
   }
