@@ -40,7 +40,7 @@ class DCIcontext extends DCIspecification {
         val outOfContext = "no go"
       """,
       """
-        |Only classes/case classes/objects can be transformed to DCI Contexts. Found:
+        |Only classes/case classes/traits/objects can be transformed to DCI Contexts. Found:
         |val outOfContext = "no go"
       """)
 

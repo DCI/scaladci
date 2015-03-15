@@ -65,7 +65,7 @@ class ShoppingCart6 extends Specification {
   import ShoppingCartModel._
 
   @context
-  class PlaceOrder(Company: Company, customer: Person) {
+  class PlaceOrder(company: Company, customer: Person) {
 
     // Context state ("Methodless roles"?)
     private var eligibleDiscountFactor = 1.0
@@ -86,10 +86,10 @@ class ShoppingCart6 extends Specification {
     def processProductRemoval(productId: Int): Option[Product] = cart.removeItem(productId)
 
     // Roles (in order of "appearance")
-    private val warehouse          = Company
-    private val customerDepartment = Company
-    private val paymentGateway     = Company
-    private val companyAccount     = Company
+    private val warehouse          = company
+    private val customerDepartment = company
+    private val paymentGateway     = company
+    private val companyAccount     = company
     private val cart               = Order(customer)
 
     role warehouse {

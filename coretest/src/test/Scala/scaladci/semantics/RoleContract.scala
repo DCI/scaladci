@@ -138,6 +138,44 @@ class RoleContract extends DCIspecification {
     @context
     case class Context(myRole: {def number: Int}) {
 
+      def trigger = myRole.foo
+
+      role myRole {
+        // We know that the instance (of unknown type) has a `number` method returning Int
+        def foo = self.number
+      }
+    }
+    Context(Data(42)).trigger === 42
+
+
+    case class NastyData(i: Int) {
+      def number = {
+        println("Firing missiles...")
+        i
+      }
+    }
+
+    @context
+    case class NaiveContext(myRole: {def number: Int}) {
+
+      def trigger = myRole.foo
+
+      role myRole {
+        // We know that the instance (of unknown type) has a `number` method returning Int
+        // - but we don't know that it also fire off missiles!!!
+        def foo = self.number
+      }
+    }
+    NaiveContext(NastyData(42)).trigger === 42 // + world war III
+  }
+
+
+  "Can be a type alias for a structural type (duck typing)" >> {
+
+    type WithNumberMethod = {def number: Int}
+
+    @context
+    case class Context(myRole: WithNumberMethod) {
 
       def trigger = myRole.foo
 

@@ -77,7 +77,7 @@ class ShoppingCart5 extends Specification {
   import ShoppingCartModel._
 
   @context
-  class PlaceOrder(Company: Company, customer: Person) {
+  class PlaceOrder(company: Company, customer: Person) {
 
     // Trigger methods
     def processProductSelection(desiredProductId: Int): Option[Product] = {
@@ -108,10 +108,10 @@ class ShoppingCart5 extends Specification {
     }
 
     // Roles (in order of "appearance")
-    private val warehouse          = Company
-    private val customerDepartment = Company
-    private val paymentGateway     = Company
-    private val companyAccount     = Company
+    private val warehouse          = company
+    private val customerDepartment = company
+    private val paymentGateway     = company
+    private val companyAccount     = company
     private val cart               = Order(customer)
 
     role warehouse {

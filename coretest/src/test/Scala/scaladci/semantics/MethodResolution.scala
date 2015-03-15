@@ -73,10 +73,12 @@ class MethodResolution extends DCIspecification {
 
       role a {
         def foo = self.bar + a.bar
-        def bar = "bar" // not called
+        def bar = "bar"
       }
     }
     Context5(new Obj).resolve === "BARFOObar"
+    // Todo: should be:
+    //    Context5(new Obj).resolve === "barbar"
 
 
     @context
@@ -88,7 +90,7 @@ class MethodResolution extends DCIspecification {
         def foo = self.bar
       }
       role b {
-        def bar = "bar" // not called
+        def bar = "bar"
       }
     }
     Context6(new Obj, new Obj).resolve === "BARFOObar"

@@ -32,7 +32,7 @@ object ContextTransformer {
       //      case t@ClassDef(_, _, _, _) if t.mods.hasFlag(ABSTRACT) => abort("Using abstract class as a DCI context is not allowed")
       case t@ClassDef(mods, name, tpeDefs, tmpl) => (mods, name, tpeDefs, tmpl)
       case t@ModuleDef(mods, name, tmpl)         => (mods, name, Nil, tmpl)
-      case tree                                  => abort("Only classes/case classes/objects can be transformed to DCI Contexts. Found:\n" + tree)
+      case tree                                  => abort("Only classes/case classes/traits/objects can be transformed to DCI Contexts. Found:\n" + tree)
     }
 
     case class abortNestedContextDefinitions(ctxName: NameApi) extends Transformer {
@@ -116,7 +116,9 @@ object ContextTransformer {
       override def transform(roleTree: Tree): Tree = roleTree match {
 
         // Transform role method
-        case roleMethod@DefDef(x1, roleMethodName, x2, x3, x4, roleMethodBody) => {
+        case roleMethod@DefDef(x1, roleMethodName, x2, x3, x4, roleMethodBody)
+          //          if ctx.hasNoOverride(roleName, roleMethodName.toString)
+        => {
 
           // Prefix role method name
           // roleMethod => RoleName_roleMethod
@@ -238,19 +240,3 @@ object ContextTransformer {
       c.Expr[Any](ModuleDef(ctxModifiers, ctxName.toTermName, Template(Nil, noSelfType, contextTree)))
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -3,17 +3,15 @@ import scala.reflect.macros.whitebox.{Context => MacroContext}
 import scaladci.util.MacroHelper
 
 trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
-  import c0.universe._, Flag._
+  import c0.universe._
+  import Flag._
   val ctxTemplate: Tree
 
+  val x = debug("ContextAnalyzer", 1)
 
   // Validate and organize Context AST
 
   abortRoleTemplate(ctxTemplate).transform(ctxTemplate)
-  val body    = ctxTemplate.asInstanceOf[TemplateApi].body
-  val objects = body.collect { case ValDef(_, name, _, _) => name}
-  val roles   = roleDefinitions(body)
-
   case class abortRoleTemplate(tree0: Tree) extends Transformer {
     override def transform(tree: Tree): Tree = tree match {
       case Template(_, ValDef(_, TermName("role"), _, _), _) => abortRoleUse(tree0, "as a template name")
@@ -21,8 +19,18 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
     }
   }
 
+  val body  = ctxTemplate.asInstanceOf[TemplateApi].body
+  val roles = roleDefinitions(body)
+
+  def hasNoOverride(roleName: String, roleMethod: String) = body.collectFirst {
+    case aa@ValDef(_, refName, tpt, _) if refName.toString == roleName =>
+      // object has no member with same name as role method
+      // TODO: Works only if ref type is defined in same scope!! :-(
+      c0.typecheck(tpt, c0.TYPEmode).tpe.member(TermName(roleMethod)) == NoSymbol
+  } getOrElse abort("Role method is not allowed to override a data class method")
+
   def isRoleMethod(roleName: String, methodName: String) =
-    !roles.isEmpty && roles.contains(roleName) && roles(roleName).contains(methodName)
+    roles.nonEmpty && roles.contains(roleName) && roles(roleName).contains(methodName)
 
   def abortRoleUse(tree: Tree, msg: String, i: Int = 0) =
     abort(s"Using `role` keyword $msg is not allowed.\nCODE: $tree\nAST: ${showRaw(tree)}", i)
@@ -52,16 +60,23 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
 
   def roleDefinitions(ctxBody: List[Tree]) = {
 
+    lazy val valRefs = ctxBody collect { case ValDef(_, valRef, _, _) => valRef }
+
     def roleMethods(roleName: Name, t: List[Tree]): List[String] = t collect {
       case DefDef(_, meth, _, _, _, _) if meth != termNames.CONSTRUCTOR => meth.toString
-      case tree                                                   => abort(
+      case tree                                                         => abort(
         s"Roles are only allowed to define methods.\nPlease remove the following code from `$roleName`:\nCODE: $tree")
     }
 
     def verifiedRoleName(roleName: Name, i: Int = 0, t: Tree = EmptyTree): String = {
-      if (ctxObjects contains roleName) roleName.toString
-      else abort(s"($i) Defined role name `${roleName.toString}` has to match some object identifier in the Context. " +
-        s"Available identifiers:\n" + ctxObjects.mkString("\n")) // + "\n" + showRaw(t))
+      // Too hard a limitation...
+      //      if (roleName.toString.head.isUpper)
+      //        abort(s"Defined role name `${roleName.toString}` should start with lower case to resemble an object")
+      //      else
+      if (valRefs contains roleName) {
+        roleName.toString
+      } else abort(s"($i) Defined role name `${roleName.toString}` has to match some object identifier in the Context. " +
+        s"Available identifiers:\n" + valRefs.mkString("\n")) // + "\n" + showRaw(t))
     }
 
     def rejectReturnValue(roleName: Name, returnValue: Tree, roleDef: Tree) {
@@ -79,7 +94,6 @@ trait ContextAnalyzer[C <: MacroContext] extends MacroHelper[C] {
 
     lazy val missingRoleName = "`role` keyword without Role name is not allowed"
 
-    lazy val ctxObjects = ctxBody collect { case ValDef(_, objName, _, _) => objName}
 
     val roles: List[Option[(String, List[String])]] = ctxBody map {
 

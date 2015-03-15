@@ -16,10 +16,6 @@ class MoneyTransfer1 extends Specification {
   case class Account(name: String, var balance: Int) {
     def increaseBalance(amount: Int) { balance += amount }
     def decreaseBalance(amount: Int) { balance -= amount }
-    def transfer(otherAccount: Account, amount: Int) {
-      this.decreaseBalance(amount)
-      otherAccount.increaseBalance(amount)
-    }
   }
 
 
