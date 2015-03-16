@@ -71,6 +71,13 @@ object ContextTransformer {
           newRoleMethodRef
 
 
+        //                // className.classMethod => className.classMethod
+        //                case classMethodRef@Select(Ident(TermName(className)), TermName(methodName)) => classMethodRef // compiler will expose non-valid refs
+        //
+        //                // classMethod => RoleName.classMethod
+        //                case classMethodRef@Ident(methodName) => Select(Ident(TermName(roleName)), methodName) // compiler will expose non-valid refs
+
+
         //        // Disallow `this` in role method body
         //        case thisRoleMethodRef@Select(This(typeNames.EMPTY), TermName(methodName)) =>
         //          abort("`this` in a role method points to the Context which is unintentional from a DCI perspective (where it would normally point to the RolePlayer).\n" +
@@ -78,46 +85,76 @@ object ContextTransformer {
         //            "Please access Context members directly if needed or use `self` to reference the Role Player.")
         //          EmptyTree
 
-        // Allow `this` in role method body
-        case thisRoleMethodRef@Apply(Select(This(typeNames.EMPTY), methodName), List(params))
-          if ctx.isRoleMethod(roleName, methodName.toString) =>
-          val newMethodRef = Apply(Ident(TermName(roleName + "_" + methodName.toString)), List(params))
+        // this.method()
+        // this.method(params..)
+        case thisRoleMethodRef@Apply(Select(This(typeNames.EMPTY), methodName), List(params)) =>
+          val newMethodRef = if (ctx.isRoleMethod(roleName, methodName.toString)) {
+            // Role method takes precedence over instance method
+            // this.roleMethod(params..) => RoleName_roleMethod(params..)
+            Apply(Ident(TermName(roleName + "_" + methodName.toString)), List(params))
+          } else {
+            // this.instMethod(params..) => RoleName.instMethod(params..)
+            Apply(Select(Ident(TermName(roleName)), methodName), List(params))
+          }
+
+          //          val newMethodRef = Apply(Ident(TermName(roleName + "_" + methodName.toString)), List(params))
           //          comp(thisRoleMethodRef, newMethodRef)
           newMethodRef
 
-        // this.instanceMethod(params..) => RoleName.instanceMethod(params..)
-        // this.instanceMethod() => RoleName.instanceMethod()
-        // this.instanceMethod => RoleName.instanceMethod
-        // someMethod(this) => someMethod(RoleName)
-        // possibly other uses?...
+
+        // this.method
+        case selfMethodRef@Select(This(typeNames.EMPTY), methodName) =>
+          val newMethodRef = if (ctx.isRoleMethod(roleName, methodName.toString)) {
+            // Role method takes precedence over instance method
+            // this.roleMethod => RoleName_roleMethod
+            Ident(TermName(roleName + "_" + methodName.toString))
+          } else {
+            // this.instMethod => RoleName.instMethod
+            Select(Ident(TermName(roleName)), methodName)
+          }
+          //          comp(selfMethodRef, newMethodRef)
+          newMethodRef
+
+
+        // this => RoleName
         case This(typeNames.EMPTY) => Ident(TermName(roleName))
 
 
 
-        //        // className.classMethod => className.classMethod
-        //        case classMethodRef@Select(Ident(TermName(className)), TermName(methodName)) => classMethodRef // compiler will expose non-valid refs
-        //
-        //        // classMethod => RoleName.classMethod
-        //        case classMethodRef@Ident(methodName) => Select(Ident(TermName(roleName)), methodName) // compiler will expose non-valid refs
-
-
-        // self.roleMethod(params..) => RoleName_roleMethod(params..)
-        // Role methods take precedence over instance methods!
-        case selfMethodRef@Apply(Select(Ident(TermName("self")), methodName), List(params))
-          if ctx.isRoleMethod(roleName, methodName.toString) =>
-          val newMethodRef = Apply(Ident(TermName(roleName + "_" + methodName.toString)), List(params))
+        // self.method()
+        // self.method(params..)
+        case selfMethodRef@Apply(Select(Ident(TermName("self")), methodName), List(params)) =>
+          val newMethodRef = if (ctx.isRoleMethod(roleName, methodName.toString)) {
+            // Role method takes precedence over instance method
+            // self.roleMethod(params..) => RoleName_roleMethod(params..)
+            Apply(Ident(TermName(roleName + "_" + methodName.toString)), List(params))
+          } else {
+            // self.instMethod(params..) => RoleName.instMethod(params..)
+            Apply(Select(Ident(TermName(roleName)), methodName), List(params))
+          }
           //          comp(selfMethodRef, newMethodRef)
           newMethodRef
 
-        // self.instanceMethod(params..) => RoleName.instanceMethod(params..)
-        // self.instanceMethod() => RoleName.instanceMethod()
-        // self.instanceMethod => RoleName.instanceMethod
-        // someMethod(self) => someMethod(RoleName)
-        // possibly other uses?...
+
+        // self.method
+        case selfMethodRef@Select(Ident(TermName("self")), methodName) =>
+          val newMethodRef = if (ctx.isRoleMethod(roleName, methodName.toString)) {
+            // Role method takes precedence over instance method
+            // self.roleMethod => RoleName_roleMethod
+            Ident(TermName(roleName + "_" + methodName.toString))
+          } else {
+            // self.instMethod => RoleName.instMethod
+            Select(Ident(TermName(roleName)), methodName)
+          }
+          //          comp(selfMethodRef, newMethodRef)
+          newMethodRef
+
+
+        // self => RoleName
         case Ident(TermName("self")) => Ident(TermName(roleName))
 
         // Transform role method tree recursively
-        case x => super.transform(roleMethodTree)
+        case _ => super.transform(roleMethodTree)
       }
     }
 
@@ -125,9 +162,7 @@ object ContextTransformer {
       override def transform(roleTree: Tree): Tree = roleTree match {
 
         // Transform role method
-        case roleMethod@DefDef(x1, roleMethodName, x2, x3, x4, roleMethodBody)
-          //          if ctx.hasNoOverride(roleName, roleMethodName.toString)
-        => {
+        case roleMethod@DefDef(x1, roleMethodName, x2, x3, x4, roleMethodBody) => {
 
           // Prefix role method name
           // roleMethod => RoleName_roleMethod

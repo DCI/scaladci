@@ -11,6 +11,27 @@ class MethodResolution extends DCIspecification {
     def bar = "BAR"
   }
 
+//  "In various languages" >> {
+//
+//    class Obj {
+//      def foo = "FOO"
+//      def bar = "BAR"
+//    }
+//
+//    @context
+//    case class SelfSemanticsContext(roleName: Obj) {
+//
+//      def bar = "CTX"
+//      def resolve = roleName.foo
+//
+//      role a {
+//        def foo = bar + self.bar + this.bar + roleName.bar
+//        def bar = "bar"
+//      }
+//    }
+//    SelfSemanticsContext(new Obj).resolve === "barBARBARbar"
+//  }
+
   "Role method takes precedence over instance method" >> {
 
     @context
@@ -63,7 +84,7 @@ class MethodResolution extends DCIspecification {
         def bar = "bar"
       }
     }
-    Context4(new Obj).resolve === "BARbar"
+    Context4(new Obj).resolve === "barbar"
 
 
     @context
@@ -77,9 +98,7 @@ class MethodResolution extends DCIspecification {
         def bar = "bar"
       }
     }
-    ContextOverriding(new Obj).resolve === "barBARBARbar"
-    // Or should it be:
-    // ContextOverriding(new Obj).resolve === "barbarbarbar"
+    ContextOverriding(new Obj).resolve === "barbarbarbar"
 
 
     @context
@@ -93,8 +112,6 @@ class MethodResolution extends DCIspecification {
       }
     }
     ContextNotOverriding(new Obj).resolve === "CTXBARBARBAR"
-    // Or should it be:
-    // ContextNotOverriding(new Obj).resolve === "BARBARBARBAR"
 
 
     //@context
@@ -107,6 +124,20 @@ class MethodResolution extends DCIspecification {
     //  }
     //}
     //ContextNotOverriding2(new Obj).resolve === "BAR"
+
+@context
+class ContextWithRoleClass {
+
+  def bar = "CTX"
+  def resolve = new A().foo
+
+  // Role as class
+  class A extends Obj {
+    override def foo = bar + this.bar
+    override def bar = "bar"
+  }
+}
+new ContextWithRoleClass().resolve === "barbar"
 
 
     @context
