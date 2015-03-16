@@ -41,7 +41,7 @@ object ScalaDciBuild extends Build with Publishing {
 
   lazy val commonSettings = Defaults.coreDefaultSettings ++ Seq(
     organization := "org.scaladci",
-    version := "0.5.4-SNAPSHOT",
+    version := "0.5.4",
     scalaVersion := "2.11.6",
     scalacOptions := Seq("-unchecked", "-deprecation", "-feature"),
     resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snapshots")),
