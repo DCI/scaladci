@@ -72,43 +72,15 @@ class MoneyTransfer(source: Account, destination: Account, amount: Int) {
 }
 ```
 
-## "Overriding" instance methods
-In some cases we want to override the instance methods of a domain object with a Role method:
-```Scala
-  role source {
-    def withdraw {
-      source.decreaseBalance(amount)
-      destination.deposit
-    }
-    
-    // Role method with same signature as instance method
-    def decreaseBalance(amount: Int) { 
-      source.balance -= amount * 3
-    }
-  }
+## Role methods that "shadow" instance methods
+In ScalaDCI, role methods will always take precedence over instance methods of the object that will play the role.
 
-  role destination {
-    def deposit {
-      destination.increaseBalance(amount)
-    }
-  }
-```
-which will now turn into
-```Scala
-  private def source_withdraw() {
-    source_decreaseBalance(amount) // Notice the underscore - the Role method will be called
-    destination_deposit()
-  }
-  
-  private def source_decreaseBalance() {
-    source.balance -= amount * 3
-  }
-  
-  private def destination_deposit() {
-    destination.increaseBalance(amount)
-  }
-```
-Role methods will always take precedence over instance methods when they have the same signature.
+Generally we want to avoid defining a role method with a name that clashes with - or "shadows" - an instance method since this could cause confusion about the runtime behavior of our program. "Which method is called on the role-playing object?".
+
+Therefore ScalaDCI tries to determine the instance type to see if a role method shadows one of its  methods, and if so throw a compile time error.
+
+But at runtime we might not be able to determine the instance type and thereby what instance method it has. In that case ScalaDCI falls back on always calling the role method. In this case no error is thrown.
+
 
 ## `self` reference to a Role Player
 As an alternative to using the Role name to reference a Role Player we can also use `self`:
@@ -141,7 +113,6 @@ or `this`:
     }
   }
 ```
-Using `self` or `this` doesn't change how Role methods take precedence over instance methods.
 
 
 ## Multiple roles
