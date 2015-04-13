@@ -31,28 +31,9 @@ class RoleBody extends DCIspecification {
       """,
       "(1) Can't assign a Role body to `myRole`. Please remove `=` before the body definition")
 
-    expectCompileError(
-      """
-        @context
-        class Context(myRole: Data) {
-          role(myRole) = {}
-        }
-      """,
-      "(2) Can't assign a Role body to `myRole`. Please remove `=` before the body definition")
-
-    expectCompileError(
-      """
-        @context
-        class Context(myRole: Data) {
-          role() = {}
-        }
-      """,
-      "(8) `role` keyword without Role name is not allowed")
-
     @context
     class Context(roleA: Data, roleB: Data) {
       role roleA {} // ok without `=`
-      role(roleB) {} // ok without `=`
     }
 
     success
@@ -208,7 +189,7 @@ class RoleBody extends DCIspecification {
         }
       """,
       """
-        |Roles are only allowed to define methods.
+        |[ContextTransformer:roleBodyTransformer] Roles are only allowed to define methods.
         |Please remove the following code from `myRole`:
         |CODE: role.nestedRole(())
       """)

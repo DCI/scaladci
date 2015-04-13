@@ -184,7 +184,7 @@ object ContextTransformer {
 
         // Only allow role methods ("No state in Roles!")
         case otherCodeInRole =>
-          abort(s"Roles are only allowed to define methods.\n" +
+          abort(s"[ContextTransformer:roleBodyTransformer] Roles are only allowed to define methods.\n" +
             s"Please remove the following code from `$roleName`:" +
             s"\nCODE: $otherCodeInRole\nAST: ${showRaw(otherCodeInRole)}")
           EmptyTree
