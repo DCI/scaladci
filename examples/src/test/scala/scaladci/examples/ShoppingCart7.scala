@@ -72,9 +72,9 @@ Deviations
 // 4 basic "dumb" Data types - Company now has a bank account
 object ShoppingCartModel7 {
   case class Product(name: String, price: Int)
-  case class Person(name: String, var cash: Int, owns: mutable.Map[Int, Product] = mutable.Map())
-  case class Company(name: String, var bankAccount: Int, stock: mutable.Map[Int, Product], goldMembers: mutable.Set[Person])
-  case class Order(customer: Person, items: mutable.Map[Int, Product] = mutable.Map())
+  case class User(name: String, var cash: Int, owns: mutable.Map[Int, Product] = mutable.Map())
+  case class Company(name: String, var bankAccount: Int, stock: mutable.Map[Int, Product], goldMembers: mutable.Set[User])
+  case class Order(customer: User, items: mutable.Map[Int, Product] = mutable.Map())
 }
 
 // Setup for each test
@@ -83,7 +83,7 @@ trait ShoppingCart7setup extends Scope {
   val (p1, p2, p3)      = (1, 2, 3)
   val (wax, tires, bmw) = (p1 -> Product("Wax", 40), p2 -> Product("Tires", 600), p3 -> Product("BMW", 50000))
   val shop              = Company("Don's Auto shop", 100000, mutable.Map(wax, tires, bmw), mutable.Set())
-  val customer          = Person("Matthew", 20000)
+  val customer          = User("Matthew", 20000)
 }
 
 class ShoppingCart7 extends Specification {
@@ -91,7 +91,7 @@ class ShoppingCart7 extends Specification {
 
   {
     @context
-    class PlaceOrder(comp: Company, person: Person) {
+    class PlaceOrder(comp: Company, user: User) {
 
       // Trigger methods
       def processProductSelection(desiredProductId: Int): Option[Product] = {
@@ -116,9 +116,9 @@ class ShoppingCart7 extends Specification {
       // Roles (in order of "appearance")
       private val warehouse      = comp
       private val company        = comp
-      private val customer       = person
-      private val cart           = Order(person)
-      private val paymentGateway = comp
+      private val customer       = user
+      private val cart           = Order(user)
+      private val paymentGateway = comp // would be played by something else in a real-world application...
       private val companyAccount = comp
 
       role warehouse {
