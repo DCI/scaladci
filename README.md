@@ -226,15 +226,6 @@ identifier in the scope of the annotated Context. If it doesn't it won't compile
 and the programmer will be noticed of available identifier names (one could have 
 misspelled the Role name for instance).
 
-If one prefers, the old "method syntax" can still be used:
-
-```scala
-role(source) {...} // `source` is an object identifier
-```
-This has the advantage of being inferred by the IDE but at the same time being
-less DCI ideomatic since it looks less like a role definition than a method call 
-which is not the intention and result after source code transformation.
-
 
 ## Scala DCI demo application
 
