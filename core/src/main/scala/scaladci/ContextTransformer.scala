@@ -162,7 +162,8 @@ object ContextTransformer {
       override def transform(roleTree: Tree): Tree = roleTree match {
 
         // Transform role method
-        case roleMethod@DefDef(x1, roleMethodName, x2, x3, x4, roleMethodBody) => {
+        case roleMethod@DefDef(x1, roleMethodName, x2, x3, x4, roleMethodBody)
+          if ctx.noCompileTimeShadowing(roleName, roleMethodName) => {
 
           // Prefix role method name
           // roleMethod => RoleName_roleMethod

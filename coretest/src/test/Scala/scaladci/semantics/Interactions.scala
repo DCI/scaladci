@@ -1,15 +1,16 @@
 package scaladci
 package semantics
-import util._
+import scaladci.util._
 
 class Interactions extends DCIspecification {
 
   "Are preferably distributed between Roles" >> {
 
     @context
-    case class Context(roleA: Data) {
-      val roleB = roleA
-      val roleC = roleA
+    case class Context(data: Data) {
+      val roleA = data
+      val roleB = data
+      val roleC = data
 
       def distributedInteractions = roleA.foo
 
@@ -32,9 +33,10 @@ class Interactions extends DCIspecification {
   "Can occasionally be centralized in Context (mediator pattern)" >> {
 
     @context
-    case class Context(roleA: Data) {
-      val roleB = roleA
-      val roleC = roleA
+    case class Context(data: Data) {
+      val roleA = data
+      val roleB = data
+      val roleC = data
 
       def centralizedInteractions = roleA.foo * roleB.bar * roleC.baz * roleC.number
 

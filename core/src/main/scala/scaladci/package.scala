@@ -7,9 +7,4 @@ package object scaladci {
   private[scaladci] object roleO extends Dynamic {
     def applyDynamic(obj: Any)(roleBody: => Unit) = roleBody
   }
-//
-//  // `role` as method
-//  // role(foo) {...}
-//  def role(instance: Unit): Unit = {}
-//  def role(instance: Any)(roleMethods: => Unit): Unit = {}
 }

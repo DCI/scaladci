@@ -25,38 +25,38 @@ class MoneyTransfer2 extends Specification {
     def decreaseBalance(amount: Int) { ledgers.addEntry("withdrawing", -amount) }
   }
 
-  @context
-  case class MoneyTransfer(source: Account, destination: Account, amount: Int) {
-
-    def transfer() {
-      source.transfer
-    }
-
-    role source {
-      def withdraw() {
-        self.decreaseBalance(amount)
-      }
-      def transfer() {
-        println("source balance is: " + self.balance)
-        println("destination balance is: " + destination.balance)
-        destination.deposit()
-        withdraw()
-        println("source balance is now: " + self.balance)
-        println("destination balance is now: " + destination.balance)
-      }
-    }
-
-    role destination {
-      def deposit() {
-        self.increaseBalance(amount)
-      }
-    }
-  }
-
-
-  // Test
 
   "Money transfer with ledgers Marvin/Rune" >> {
+
+    @context
+    case class MoneyTransfer(source: Account, destination: Account, amount: Int) {
+
+      def transfer() {
+        source.transfer
+      }
+
+      role source {
+        def withdraw() {
+          self.decreaseBalance(amount)
+        }
+        def transfer() {
+          println("source balance is: " + self.balance)
+          println("destination balance is: " + destination.balance)
+          destination.deposit()
+          withdraw()
+          println("source balance is now: " + self.balance)
+          println("destination balance is now: " + destination.balance)
+        }
+      }
+
+      role destination {
+        def deposit() {
+          self.increaseBalance(amount)
+        }
+      }
+    }
+
+    // Test
     val source = Account("salary", List(LedgerEntry("start", 0), LedgerEntry("first deposit", 1000)))
     val destination = Account("budget", List())
 

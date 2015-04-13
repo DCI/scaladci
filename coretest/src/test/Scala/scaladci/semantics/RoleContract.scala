@@ -83,7 +83,8 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class Context(myRole: Data) { // <- We feel falsely safe :-(
+    case class Context(myRole: Data) {
+      // <- We feel falsely safe :-(
 
       def trigger = myRole.foo
 
@@ -105,30 +106,31 @@ class RoleContract extends DCIspecification {
       override def number = -666
     }
 
-    // Implicit type evidence enforces a strict type (no subtype allowed)
-    @context
-    case class Context[T](myRole: T)(implicit val ev: T =:= ExpectedType) {
+    {
+      // Implicit type evidence enforces a strict type (no subtype allowed)
+      @context
+      case class Context[T](myRole: T)(implicit val ev: T =:= ExpectedType) {
 
-      def trigger = myRole.foo
+        def trigger = myRole.foo
 
-      role myRole {
-        def foo = self.number
+        role myRole {
+          def foo = self.number
+        }
       }
-    }
 
-    // A dodgy subclass can't sneak in
-    expectCompileError(
-      """
+      // A dodgy subclass can't sneak in
+      expectCompileError(
+        """
         val devilInDisguise = new DodgySubClass(42)
         Context(devilInDisguise).trigger === 42
-      """,
-      "Cannot prove that DodgySubClass =:= ExpectedType")
+        """,
+        "Cannot prove that DodgySubClass =:= ExpectedType")
 
-    // Only objects of our expected type (and no subtype) can be used:
-    val expectedObject = new ExpectedType(42)
-    Context(expectedObject).trigger === 42
+      // Only objects of our expected type (and no subtype) can be used:
+      val expectedObject = new ExpectedType(42)
+      Context(expectedObject).trigger === 42
+    }
   }
-
 
   /** ****** Structural Type (duck typing) **************************************************/
 
@@ -174,18 +176,19 @@ class RoleContract extends DCIspecification {
 
     type WithNumberMethod = {def number: Int}
 
-    @context
-    case class Context(myRole: WithNumberMethod) {
+    {
+      @context
+      case class Context(myRole: WithNumberMethod) {
 
-      def trigger = myRole.foo
+        def trigger = myRole.foo
 
-      role myRole {
-        // We know that the instance (of unknown type) has a `number` method returning Int
-        def foo = self.number
+        role myRole {
+          // We know that the instance (of unknown type) has a `number` method returning Int
+          def foo = self.number
+        }
       }
+      Context(Data(42)).trigger === 42
     }
-    Context(Data(42)).trigger === 42
-
 
     case class NastyData(i: Int) {
       def number = {
@@ -194,20 +197,21 @@ class RoleContract extends DCIspecification {
       }
     }
 
-    @context
-    case class NaiveContext(myRole: {def number: Int}) {
+    {
+      @context
+      case class NaiveContext(myRole: {def number: Int}) {
 
-      def trigger = myRole.foo
+        def trigger = myRole.foo
 
-      role myRole {
-        // We know that the instance (of unknown type) has a `number` method returning Int
-        // - but we don't know that it also fire off missiles!!!
-        def foo = self.number
+        role myRole {
+          // We know that the instance (of unknown type) has a `number` method returning Int
+          // - but we don't know that it also fire off missiles!!!
+          def foo = self.number
+        }
       }
+      NaiveContext(NastyData(42)).trigger === 42 // + world war III
     }
-    NaiveContext(NastyData(42)).trigger === 42 // + world war III
   }
-
 
   "Can require several instance methods with structural types (duck typing)" >> {
 
@@ -302,7 +306,8 @@ class RoleContract extends DCIspecification {
     }
 
     @context
-    case class Context(myRole: Data {def text: String}) { // <- OtherData will satisfy this contract
+    case class Context(myRole: Data {def text: String}) {
+      // <- OtherData will satisfy this contract
 
       def trigger = myRole.foo
 

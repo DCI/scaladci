@@ -54,224 +54,226 @@ Deviations
 class ShoppingCart4a extends Specification {
   import ShoppingCartModel._
 
-  @context
-  class PlaceOrder(shop: Company, customer: Person) {
+  {
+    @context
+    class PlaceOrder(shop: Company, customer: Person) {
 
-    // UC steps
-    def customerMarksdesiredProductInshop(productId: Int): Option[Product] =
-      customer.markdesiredProductInshop(productId)
-    def customerRequestsToReviewOrder: Seq[(Int, Product)] =
-      customer.reviewOrder
-    def customerPaysOrder: Boolean =
-      customer.payOrder
+      // UC steps
+      def customerMarksdesiredProductInshop(productId: Int): Option[Product] =
+        customer.markdesiredProductInshop(productId)
+      def customerRequestsToReviewOrder: Seq[(Int, Product)] =
+        customer.reviewOrder
+      def customerPaysOrder: Boolean =
+        customer.payOrder
 
-    // Deviation(s)
-    def customerRemovesProductFromcart(productId: Int): Option[Product] =
-      customer.removeProductFromcart(productId)
+      // Deviation(s)
+      def customerRemovesProductFromcart(productId: Int): Option[Product] =
+        customer.removeProductFromcart(productId)
 
-    // Roles
-    role customer {
-      def markdesiredProductInshop(productId: Int): Option[Product] = {
-        if (!shop.stock.isDefinedAt(productId))
-          return None
-        val product = shop.stock(productId)
-        val discountedPrice = customer.getMemberPriceOf(product)
-        val desiredProduct = product.copy(price = discountedPrice)
-        cart.addItem(productId, desiredProduct)
-        Some(desiredProduct)
+      // Roles
+      role customer {
+        def markdesiredProductInshop(productId: Int): Option[Product] = {
+          if (!shop.stock.isDefinedAt(productId))
+            return None
+          val product = shop.stock(productId)
+          val discountedPrice = customer.getMemberPriceOf(product)
+          val desiredProduct = product.copy(price = discountedPrice)
+          cart.addItem(productId, desiredProduct)
+          Some(desiredProduct)
+        }
+        def reviewOrder = cart.getItems
+        def removeProductFromcart(productId: Int) = cart.removeItem(productId: Int)
+        def payOrder: Boolean = {
+          val orderTotal = cart.total
+          if (orderTotal > customer.cash)
+            return false
+
+          customer.cash -= orderTotal
+          shop.cash += orderTotal
+
+          customer.owns ++= cart.items
+          cart.items foreach (shop.stock remove _._1)
+          true
+        }
+
+        def getMemberPriceOf(product: Product) = {
+          val customerIsGoldMember = shop.goldMembers.contains(customer)
+          val goldMemberReduction = 0.5
+          val discountFactor = if (customerIsGoldMember) goldMemberReduction else 1
+          (product.price * discountFactor).toInt
+        }
       }
-      def reviewOrder = cart.getItems
-      def removeProductFromcart(productId: Int) = cart.removeItem(productId: Int)
-      def payOrder: Boolean = {
-        val orderTotal = cart.total
-        if (orderTotal > customer.cash)
-          return false
 
-        customer.cash -= orderTotal
-        shop.cash += orderTotal
+      private val cart = Order(customer)
 
-        customer.owns ++= cart.items
-        cart.items foreach (shop.stock remove _._1)
-        true
-      }
-
-      def getMemberPriceOf(product: Product) = {
-        val customerIsGoldMember = shop.goldMembers.contains(customer)
-        val goldMemberReduction = 0.5
-        val discountFactor = if (customerIsGoldMember) goldMemberReduction else 1
-        (product.price * discountFactor).toInt
+      role cart {
+        def addItem(productId: Int, product: Product) {
+          cart.items.put(productId, product)
+        }
+        def removeItem(productId: Int): Option[Product] = {
+          if (!cart.items.isDefinedAt(productId))
+            return None
+          cart.items.remove(productId)
+        }
+        def getItems = cart.items.toIndexedSeq.sortBy(_._1)
+        def total = cart.items.map(_._2.price).sum
       }
     }
 
-    private val cart = Order(customer)
 
-    role cart {
-      def addItem(productId: Int, product: Product) {
-        cart.items.put(productId, product)
-      }
-      def removeItem(productId: Int): Option[Product] = {
-        if (!cart.items.isDefinedAt(productId))
-          return None
-        cart.items.remove(productId)
-      }
-      def getItems = cart.items.toIndexedSeq.sortBy(_._1)
-      def total = cart.items.map(_._2.price).sum
+    // Test various scenarios.
+    // (copy and paste of ShoppingCart2/3 tests)
+
+    "Main success scenario" in new ShoppingCart {
+
+      // Initial status (same for all tests...)
+      shop.stock === Map(tires, wax, bmw)
+      shop.cash === 100000
+      customer.cash === 20000
+      customer.owns === Map()
+
+      val order = new PlaceOrder(shop, customer)
+
+      // customer wants wax and tires
+      order.customerMarksdesiredProductInshop(p1)
+      order.customerMarksdesiredProductInshop(p2)
+
+      order.customerRequestsToReviewOrder === Seq(wax, tires)
+
+      val orderCompleted = order.customerPaysOrder === true
+
+      shop.stock === Map(bmw)
+      shop.cash === 100000 + 40 + 600
+      customer.cash === 20000 - 40 - 600
+      customer.owns === Map(tires, wax)
     }
-  }
 
+    "Product out of stock" in new ShoppingCart {
 
-  // Test various scenarios.
-  // (copy and paste of ShoppingCart2/3 tests)
+      // Wax out of stock
+      shop.stock.remove(p1)
+      shop.stock === Map(tires, bmw)
 
-  "Main success scenario" in new ShoppingCart {
+      val order = new PlaceOrder(shop, customer)
 
-    // Initial status (same for all tests...)
-    shop.stock === Map(tires, wax, bmw)
-    shop.cash === 100000
-    customer.cash === 20000
-    customer.owns === Map()
+      // customer wants wax
+      val itemAdded = order.customerMarksdesiredProductInshop(p1) === None
+      order.customerRequestsToReviewOrder === Seq()
 
-    val order = new PlaceOrder(shop, customer)
+      order.customerMarksdesiredProductInshop(p2)
 
-    // customer wants wax and tires
-    order.customerMarksdesiredProductInshop(p1)
-    order.customerMarksdesiredProductInshop(p2)
+      val orderCompleted = order.customerPaysOrder === true
 
-    order.customerRequestsToReviewOrder === Seq(wax, tires)
+      shop.stock === Map(bmw)
+      shop.cash === 100000 + 600
+      customer.cash === 20000 - 600
+      customer.owns === Map(tires)
+    }
 
-    val orderCompleted = order.customerPaysOrder === true
+    "customer has gold membership" in new ShoppingCart {
 
-    shop.stock === Map(bmw)
-    shop.cash === 100000 + 40 + 600
-    customer.cash === 20000 - 40 - 600
-    customer.owns === Map(tires, wax)
-  }
+      // customer is gold member
+      shop.goldMembers.add(customer)
+      shop.goldMembers.contains(customer) === true
 
-  "Product out of stock" in new ShoppingCart {
+      val order = new PlaceOrder(shop, customer)
 
-    // Wax out of stock
-    shop.stock.remove(p1)
-    shop.stock === Map(tires, bmw)
+      order.customerMarksdesiredProductInshop(p1)
 
-    val order = new PlaceOrder(shop, customer)
+      val discountedWax = 1 -> Product("Wax", (40 * 0.5).toInt)
+      order.customerRequestsToReviewOrder === Seq(discountedWax)
 
-    // customer wants wax
-    val itemAdded = order.customerMarksdesiredProductInshop(p1) === None
-    order.customerRequestsToReviewOrder === Seq()
+      val orderCompleted = order.customerPaysOrder === true
 
-    order.customerMarksdesiredProductInshop(p2)
+      shop.stock === Map(tires, bmw)
+      shop.cash === 100000 + 20
+      customer.cash === 20000 - 20
+      customer.owns === Map(discountedWax)
+    }
 
-    val orderCompleted = order.customerPaysOrder === true
+    "customer has too low credit" in new ShoppingCart {
 
-    shop.stock === Map(bmw)
-    shop.cash === 100000 + 600
-    customer.cash === 20000 - 600
-    customer.owns === Map(tires)
-  }
+      val order = new PlaceOrder(shop, customer)
 
-  "customer has gold membership" in new ShoppingCart {
+      // customer wants a BMW
+      val itemAdded = order.customerMarksdesiredProductInshop(p3)
 
-    // customer is gold member
-    shop.goldMembers.add(customer)
-    shop.goldMembers.contains(customer) === true
+      // Any product is added - shop doesn't yet know if customer can afford it
+      itemAdded === Some(bmw._2)
+      order.customerRequestsToReviewOrder === Seq(bmw)
 
-    val order = new PlaceOrder(shop, customer)
+      // customer tries to pay order
+      val paymentStatus = order.customerPaysOrder
 
-    order.customerMarksdesiredProductInshop(p1)
+      // shop informs customer of too low credit
+      paymentStatus === false
 
-    val discountedWax = 1 -> Product("Wax", (40 * 0.5).toInt)
-    order.customerRequestsToReviewOrder === Seq(discountedWax)
+      // customer removes unaffordable BMW from cart
+      order.customerRemovesProductFromcart(p3)
 
-    val orderCompleted = order.customerPaysOrder === true
+      // customer aborts shopping and no purchases are made
+      shop.stock === Map(tires, wax, bmw)
+      shop.cash === 100000
+      customer.cash === 20000
+      customer.owns === Map()
+    }
 
-    shop.stock === Map(tires, bmw)
-    shop.cash === 100000 + 20
-    customer.cash === 20000 - 20
-    customer.owns === Map(discountedWax)
-  }
+    "All deviations in play" in new ShoppingCart {
 
-  "customer has too low credit" in new ShoppingCart {
+      // Tires out of stock
+      shop.stock.remove(p2)
+      shop.stock === Map(wax, bmw)
 
-    val order = new PlaceOrder(shop, customer)
+      // We have a gold member
+      shop.goldMembers.add(customer)
 
-    // customer wants a BMW
-    val itemAdded = order.customerMarksdesiredProductInshop(p3)
+      val order = new PlaceOrder(shop, customer)
 
-    // Any product is added - shop doesn't yet know if customer can afford it
-    itemAdded === Some(bmw._2)
-    order.customerRequestsToReviewOrder === Seq(bmw)
+      // Let's get some tires
+      val tiresItemAdded = order.customerMarksdesiredProductInshop(p2)
 
-    // customer tries to pay order
-    val paymentStatus = order.customerPaysOrder
+      // Product out of stock!
+      shop.stock.contains(p2) === false
 
-    // shop informs customer of too low credit
-    paymentStatus === false
+      // Nothing added to order yet
+      tiresItemAdded === None
+      order.customerRequestsToReviewOrder === Seq()
 
-    // customer removes unaffordable BMW from cart
-    order.customerRemovesProductFromcart(p3)
+      // Let's buy the BMW instead. As a gold member that should be possible!
+      val bmwItemAdded = order.customerMarksdesiredProductInshop(p3)
 
-    // customer aborts shopping and no purchases are made
-    shop.stock === Map(tires, wax, bmw)
-    shop.cash === 100000
-    customer.cash === 20000
-    customer.owns === Map()
-  }
+      // Discounted BMW is added to order
+      val discountedBMW = Product("BMW", (50000 * 0.5).toInt)
+      bmwItemAdded === Some(discountedBMW)
+      order.customerRequestsToReviewOrder === Seq(p3 -> discountedBMW)
 
-  "All deviations in play" in new ShoppingCart {
+      // Ouch! We couldn't afford it.
+      val paymentAttempt1 = order.customerPaysOrder === false
 
-    // Tires out of stock
-    shop.stock.remove(p2)
-    shop.stock === Map(wax, bmw)
+      // It's still 5000 too much for us, even with the membership discount
+      discountedBMW.price - customer.cash === 5000
 
-    // We have a gold member
-    shop.goldMembers.add(customer)
+      // Ok, no new car today
+      order.customerRemovesProductFromcart(p3)
 
-    val order = new PlaceOrder(shop, customer)
+      // Order is back to empty
+      order.customerRequestsToReviewOrder === Seq()
 
-    // Let's get some tires
-    val tiresItemAdded = order.customerMarksdesiredProductInshop(p2)
+      // Let's get some wax anyway...
+      val waxItemAdded = order.customerMarksdesiredProductInshop(p1)
 
-    // Product out of stock!
-    shop.stock.contains(p2) === false
+      // Did we get our membership discount on this one?
+      val discountedWax = Product("Wax", (40 * 0.5).toInt)
+      waxItemAdded === Some(discountedWax)
 
-    // Nothing added to order yet
-    tiresItemAdded === None
-    order.customerRequestsToReviewOrder === Seq()
+      // Now we can afford it!
+      val paymentAttempt2 = order.customerPaysOrder === true
 
-    // Let's buy the BMW instead. As a gold member that should be possible!
-    val bmwItemAdded = order.customerMarksdesiredProductInshop(p3)
-
-    // Discounted BMW is added to order
-    val discountedBMW = Product("BMW", (50000 * 0.5).toInt)
-    bmwItemAdded === Some(discountedBMW)
-    order.customerRequestsToReviewOrder === Seq(p3 -> discountedBMW)
-
-    // Ouch! We couldn't afford it.
-    val paymentAttempt1 = order.customerPaysOrder === false
-
-    // It's still 5000 too much for us, even with the membership discount
-    discountedBMW.price - customer.cash === 5000
-
-    // Ok, no new car today
-    order.customerRemovesProductFromcart(p3)
-
-    // Order is back to empty
-    order.customerRequestsToReviewOrder === Seq()
-
-    // Let's get some wax anyway...
-    val waxItemAdded = order.customerMarksdesiredProductInshop(p1)
-
-    // Did we get our membership discount on this one?
-    val discountedWax = Product("Wax", (40 * 0.5).toInt)
-    waxItemAdded === Some(discountedWax)
-
-    // Now we can afford it!
-    val paymentAttempt2 = order.customerPaysOrder === true
-
-    // Not much shopping done Today. At least we got some cheap wax.
-    shop.stock === Map(bmw)
-    shop.cash === 100000 + 20
-    customer.cash === 20000 - 20
-    customer.owns === Map(p1 -> discountedWax)
+      // Not much shopping done Today. At least we got some cheap wax.
+      shop.stock === Map(bmw)
+      shop.cash === 100000 + 20
+      customer.cash === 20000 - 20
+      customer.owns === Map(p1 -> discountedWax)
+    }
   }
 }

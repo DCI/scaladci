@@ -1,6 +1,7 @@
 package scaladci
 package examples.dijkstra
-import collection.mutable
+import scala.collection.mutable
+
 /*
 Some background info about how the type macro transformation of the Abstract Syntax Tree (AST) enables us to
 bind instance objects to roles:
@@ -13,18 +14,6 @@ Context type!
 
 We can therefore peek into the source code of CalculateShortestPath in advance and transform various sections
 of it to allow our instance objects to play Roles.
-
-What looks like a "role" method call (in the bottom of the CalculateShortestPath classs), actually just acts
-as a placeholder for defining our role methods! Since Scala doesn't even allow us to introduce a "role" keyword
-with a compiler plugin, this is probably the closest alternative we have (unless we go into the deep halls of
-the Scala compiler itself, which takes its master and is much less flexible!). Our "Role Definition Method"
-has the following signature:
-
-  def role(instance: AnyRef)(roleMethods: => Unit) {}
-          \--- RoleName---/ \----RoleMethods----/ (empty implementation)
-
-We can pass an instance object with a suitable identifier name that will act as the Role Name. The instance
-object can come from anywhere.
 
 Inside curly braces that matches the second arguments list (roleMethods: => Unit), we can supply our role
 methods as we do with our first role method assigntentativeDistances in the Role "tentativeDistances":
@@ -78,6 +67,31 @@ We start out with one role: TentativeDistance which is mostly a "housekeeping" r
 initial assignment of tentative distances as described in step 1 of the algorithm. Notice that we use an
 object created inside the Context to play the TentativeDistance role.
 */
+
+
+// Data #####################################################################
+case class Intersection(name: Char)
+case class Block(x: Intersection, y: Intersection)
+
+// Test data ################################################################
+case class ManhattanGrid() {
+  val intersections               = ('a' to 'i').map(Intersection(_)).toList
+  val (a, b, c, d, e, f, g, h, i) = (intersections(0), intersections(1), intersections(2), intersections(3), intersections(4), intersections(5), intersections(6), intersections(7), intersections(8))
+  val nextDownTheStreet           = Map(a -> b, b -> c, d -> e, e -> f, g -> h, h -> i)
+  val nextAlongTheAvenue          = Map(a -> d, b -> e, c -> f, d -> g, f -> i)
+  val blockLengths                = Map(Block(a, b) -> 2, Block(b, c) -> 3, Block(c, f) -> 1, Block(f, i) -> 4, Block(b, e) -> 2, Block(e, f) -> 1, Block(a, d) -> 1, Block(d, g) -> 2, Block(g, h) -> 1, Block(h, i) -> 2, Block(d, e) -> 1)
+
+  //    a - 2 - b - 3 - c
+  //    |       |       |
+  //    1       2       1
+  //    |       |       |
+  //    d - 1 - e - 1 - f
+  //    |               |
+  //    2               4
+  //    |               |
+  //    g - 1 - h - 2 - i
+}
+
 object Step1_TentDist extends App {
 
   // Context ##################################################################
@@ -87,10 +101,11 @@ object Step1_TentDist extends App {
     City: ManhattanGrid,
     CurrentIntersection: Intersection,
     destination: Intersection
-  ) {
+    ) {
 
     // Initialization of a data-holding role player in the Context
-    private val tentativeDistances = mutable.HashMap[Intersection, Int]()
+    private val tentativeDistances: mutable.HashMap[Intersection, Int] = mutable.HashMap[Intersection, Int]()
+    //    private val tentativeDistances = mutable.HashMap[Intersection, Int]()
 
     // Run
     tentativeDistances.assigntentativeDistances
@@ -113,29 +128,6 @@ object Step1_TentDist extends App {
         City.intersections.filter(_ != CurrentIntersection).foreach(tentativeDistances.put(_, Int.MaxValue / 4))
       }
     }
-  }
-
-  // Data #####################################################################
-  case class Intersection(name: Char)
-  case class Block(x: Intersection, y: Intersection)
-
-  // Test data ################################################################
-  case class ManhattanGrid() {
-    val intersections               = ('a' to 'i').map(Intersection(_)).toList
-    val (a, b, c, d, e, f, g, h, i) = (intersections(0), intersections(1), intersections(2), intersections(3), intersections(4), intersections(5), intersections(6), intersections(7), intersections(8))
-    val nextDownTheStreet           = Map(a -> b, b -> c, d -> e, e -> f, g -> h, h -> i)
-    val nextAlongTheAvenue          = Map(a -> d, b -> e, c -> f, d -> g, f -> i)
-    val blockLengths                = Map(Block(a, b) -> 2, Block(b, c) -> 3, Block(c, f) -> 1, Block(f, i) -> 4, Block(b, e) -> 2, Block(e, f) -> 1, Block(a, d) -> 1, Block(d, g) -> 2, Block(g, h) -> 1, Block(h, i) -> 2, Block(d, e) -> 1)
-
-    //    a - 2 - b - 3 - c
-    //    |       |       |
-    //    1       2       1
-    //    |       |       |
-    //    d - 1 - e - 1 - f
-    //    |               |
-    //    2               4
-    //    |               |
-    //    g - 1 - h - 2 - i
   }
 
   // Execution ##########################################################

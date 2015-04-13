@@ -1,6 +1,7 @@
 package scaladci
 package examples
 import org.specs2.mutable._
+
 import scala.language.reflectiveCalls
 
 /*
@@ -38,29 +39,32 @@ class DuckTyping extends Specification {
     override def decreaseBalance(amount: Int) = ??? // Not implemented
   }
 
-  @context
-  class MoneyTransfer(
-    source: { def decreaseBalance(amount: Int) }, // <- structural (duck) type
-    destination: MyAccount,
-    amount: Int) {
-
-    source.withdraw
-
-    role source {
-      def withdraw() {
-        source.decreaseBalance(amount)
-        destination.deposit
-      }
-    }
-
-    role destination {
-      def deposit() {
-        destination.increaseBalance(amount)
-      }
-    }
-  }
 
   "Ducktyping is less safe" >> {
+
+    @context
+    class MoneyTransfer(
+      source: {def decreaseBalance(amount: Int)}, // <- structural (duck) type
+      destination: MyAccount,
+      amount: Int) {
+
+      source.withdraw
+
+      role source {
+        def withdraw() {
+          source.decreaseBalance(amount)
+          destination.deposit
+        }
+      }
+
+      role destination {
+        def deposit() {
+          destination.increaseBalance(amount)
+        }
+      }
+    }
+
+    // Test
     val salary = HackedAccount("Salary", 3000)
     val budget = MyAccount("Budget", 1000)
 
