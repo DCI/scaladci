@@ -1,13 +1,30 @@
 # Scala DCI
 
-###Enabling true object oriented programming in Scala
-
 The [Data Context Interaction (DCI)](http://en.wikipedia.org/wiki/Data,_context_and_interaction) 
 paradigm by Trygve Reenskaug and James Coplien embodies true object-orientation where
 runtime Interactions between a network of objects in a particular Context 
-is understood _and_ coded as first class citizens.
+is understood _and_ coded as first class citizens. ScalaDCI tries to get as close as Scala allows
+us to realize the goals of DCI by using macro source code transformation, also known as "injectionless DCI".
 
-Let's take a simple Data class Account with some basic methods:
+DCI is a new paradigm that implies many layers of new thinking that are fundamentally different from
+how mainstream "object-oriented" coding is perceived Today. It's not just a "technique" or a "pattern". It
+is also about how we think about the domain and what the system is versus what the system does. And DCI
+offers new ways to be more explicit about the does-side in ways that enable us to reason about
+what the code will do at runtime. Something that the Gang of Four admitted most "object-oriented" systems
+don't offer with their deeply nested deferred hierarchies of classes organized in endless patterns that
+tell almost nothing about the path _objects_ instantiated from those classes will take at runtime. 
+That unfortunately makes Todays programs almost impossible to reason about and therefore completely reliant on 
+extensive test suites that desperately try to catch runtime surprises - surprises that DCI tries to avoid 
+from the outset by taking a fundamentally more reasonable approach.
+
+At the moment extensive research and development is taken on by James Coplien to develop a truly 
+object-oriented research language called "trygve", named after the inventor of DCI, Trygve Reenskaug. 
+See more on the 
+[official DCI site](http://www.fulloo.info) and on the
+[google list](https://groups.google.com/forum/#!forum/object-composition).
+
+
+To see how ScalaDCI works, let's take a very simple example of a Data class Account with some basic methods:
 ```scala
 case class Account(name: String, var balance: Int) {
   def increaseBalance(amount: Int) { balance += amount }
