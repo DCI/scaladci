@@ -252,13 +252,13 @@ how to create a DCI project.
 
 ## Using Scala DCI in your project
 
-ScalaDCI is available for Scala 2.11.6 at [Sonatype](https://oss.sonatype.org/content/repositories/releases/org/scaladci/scaladci_2.11/0.5.5/).
+ScalaDCI is available for Scala 2.12.2 at [Sonatype](https://oss.sonatype.org/content/repositories/releases/org/scaladci/scaladci_2.12/0.5.6/).
 To start coding with DCI in Scala add the following to your SBT build file:
 
     libraryDependencies ++= Seq(
-      "org.scaladci" %% "scaladci" % "0.5.5"
+      "org.scaladci" %% "scaladci" % "0.5.6"
     ),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
 
 ## Building Scala DCI
@@ -267,11 +267,8 @@ git clone https://github.com/DCI/scaladci.git
 <open in your IDE>
 ```
 
-
 Have fun!
 
-Marc Grue<br>
-April 2015
 
 ### DCI resources
 Discussions - [Object-composition](https://groups.google.com/forum/?fromgroups#!forum/object-composition)<br>
